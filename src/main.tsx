@@ -6,6 +6,7 @@ import Home from "./pages/Home.tsx";
 import Theater from "./pages/Theater.tsx";
 import Promotion from "./pages/Promotion.tsx";
 import Movie from "./pages/Movie.tsx";
+import News from "./pages/News.tsx";
 import "./styles/global.css";
 
 const router = createBrowserRouter([
@@ -28,6 +29,10 @@ const router = createBrowserRouter([
       {
         path: "movie",
         element: <Movie />,
+      },
+      {
+        path: "news",
+        element: <News />,
       },
       // {
       //   path: "/about",
