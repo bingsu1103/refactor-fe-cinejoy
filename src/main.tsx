@@ -7,6 +7,7 @@ import Theater from "./pages/Theater.tsx";
 import Promotion from "./pages/Promotion.tsx";
 import Movie from "./pages/Movie.tsx";
 import News from "./pages/News.tsx";
+import Login from "./pages/Login.tsx";
 import "./styles/global.css";
 
 const router = createBrowserRouter([
@@ -55,6 +56,10 @@ const router = createBrowserRouter([
       //   element: <Checkout />,
       // },
     ],
+  },
+  {
+    path: "/login",
+    element: <Login />,
   },
   // {
   //   path: "/admin",
