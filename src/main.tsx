@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import Home from "./pages/Home.tsx";
 import Theater from "./pages/Theater.tsx";
+import Promotion from "./pages/Promotion.tsx";
 import "./styles/global.css";
 
 const router = createBrowserRouter([
@@ -18,6 +19,10 @@ const router = createBrowserRouter([
       {
         path: "theater",
         element: <Theater />,
+      },
+      {
+        path: "promotion",
+        element: <Promotion />,
       },
       // {
       //   path: "/about",
