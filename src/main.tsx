@@ -8,6 +8,7 @@ import Promotion from "./pages/Promotion.tsx";
 import Movie from "./pages/Movie.tsx";
 import News from "./pages/News.tsx";
 import Login from "./pages/Login.tsx";
+import Register from "./pages/Register.tsx";
 import "./styles/global.css";
 
 const router = createBrowserRouter([
@@ -60,6 +61,10 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/register",
+    element: <Register />,
   },
   // {
   //   path: "/admin",
