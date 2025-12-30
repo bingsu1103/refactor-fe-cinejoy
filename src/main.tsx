@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import Home from "./pages/Home.tsx";
 import Theater from "./pages/Theater.tsx";
 import Promotion from "./pages/Promotion.tsx";
+import Movie from "./pages/Movie.tsx";
 import "./styles/global.css";
 
 const router = createBrowserRouter([
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
       {
         path: "promotion",
         element: <Promotion />,
+      },
+      {
+        path: "movie",
+        element: <Movie />,
       },
       // {
       //   path: "/about",
