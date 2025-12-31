@@ -9,8 +9,9 @@ import Movie from "./pages/Movie.tsx";
 import News from "./pages/News.tsx";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
-import Booking from "./pages/Booking.tsx";
+import Payment from "./pages/Payment.tsx";
 import "./styles/global.css";
+import MovieDetail from "./pages/MovieDetail.tsx";
 
 const router = createBrowserRouter([
   {
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
       {
         path: "news",
         element: <News />,
+      },
+      {
+        path: "movie/:id",
+        element: <MovieDetail />,
       },
       // {
       //   path: "/about",
@@ -68,8 +73,8 @@ const router = createBrowserRouter([
     element: <Register />,
   },
   {
-    path: "/booking",
-    element: <Booking />,
+    path: "/payment",
+    element: <Payment />,
   },
   // {
   //   path: "/admin",

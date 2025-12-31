@@ -1,9 +1,83 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import authApi from "../services/api-auth";
 
 const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // Validation
+    if (!email.trim()) {
+      setError("Vui lòng nhập email");
+      return;
+    }
+    if (!username.trim()) {
+      setError("Vui lòng nhập tên người dùng");
+      return;
+    }
+    if (!password.trim()) {
+      setError("Vui lòng nhập mật khẩu");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Mật khẩu phải có ít nhất 6 ký tự");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Mật khẩu xác nhận không khớp");
+      return;
+    }
+    if (!agreeTerms) {
+      setError("Vui lòng đồng ý với điều khoản sử dụng");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await authApi.register(username, email, password);
+
+      if (response.statusCode === 200 || response.statusCode === 201) {
+        // Registration successful, redirect to homepage
+        navigate("/login");
+      } else {
+        // Handle error from backend
+        const errorMessage =
+          typeof response.message === "string"
+            ? response.message
+            : response.error || "Đăng ký thất bại. Vui lòng thử lại.";
+        setError(errorMessage);
+      }
+    } catch (err: unknown) {
+      console.error("Register error:", err);
+      if (err && typeof err === "object" && "response" in err) {
+        const axiosError = err as {
+          response?: { data?: { message?: string } };
+        };
+        setError(
+          axiosError.response?.data?.message ||
+            "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin."
+        );
+      } else {
+        setError("Có lỗi xảy ra. Vui lòng thử lại sau.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="relative min-h-screen flex flex-col">
@@ -63,8 +137,16 @@ const Register: React.FC = () => {
               </p>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg">error</span>
+                {error}
+              </div>
+            )}
+
             {/* Form */}
-            <form className="flex flex-col gap-5">
+            <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
               {/* Social Login Buttons */}
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -122,6 +204,9 @@ const Register: React.FC = () => {
                   className="w-full rounded-lg bg-[#482329] border-transparent focus:border-primary focus:ring-0 text-white placeholder-[#c9929b]/50 h-12 px-4 transition-all"
                   placeholder="example@mail.com"
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
                 />
               </label>
 
@@ -134,6 +219,9 @@ const Register: React.FC = () => {
                   className="w-full rounded-lg bg-[#482329] border-transparent focus:border-primary focus:ring-0 text-white placeholder-[#c9929b]/50 h-12 px-4 transition-all"
                   placeholder="MovieFan123"
                   type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={isLoading}
                 />
               </label>
 
@@ -145,6 +233,9 @@ const Register: React.FC = () => {
                     className="w-full rounded-lg bg-[#482329] border-transparent focus:border-primary focus:ring-0 text-white placeholder-[#c9929b]/50 h-12 px-4 pr-12 transition-all"
                     placeholder="••••••••"
                     type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
                   />
                   <button
                     className="absolute right-0 top-0 bottom-0 px-4 text-[#c9929b] hover:text-white transition-colors flex items-center"
@@ -168,6 +259,9 @@ const Register: React.FC = () => {
                     className="w-full rounded-lg bg-[#482329] border-transparent focus:border-primary focus:ring-0 text-white placeholder-[#c9929b]/50 h-12 px-4 pr-12 transition-all"
                     placeholder="••••••••"
                     type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isLoading}
                   />
                   <button
                     className="absolute right-0 top-0 bottom-0 px-4 text-[#c9929b] hover:text-white transition-colors flex items-center"
@@ -187,6 +281,9 @@ const Register: React.FC = () => {
                   <input
                     className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-[#c9929b] bg-transparent checked:bg-primary checked:border-primary transition-all"
                     type="checkbox"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    disabled={isLoading}
                   />
                   <span className="absolute text-white opacity-0 peer-checked:opacity-100 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                     <span className="material-symbols-outlined text-[16px] font-bold">
@@ -196,23 +293,56 @@ const Register: React.FC = () => {
                 </div>
                 <span className="text-[#c9929b] text-sm leading-tight group-hover:text-white transition-colors">
                   Tôi đồng ý với{" "}
-                  <a className="text-white font-bold hover:underline" href="#">
+                  <Link
+                    to="/terms"
+                    className="text-white font-bold hover:underline"
+                  >
                     Điều khoản sử dụng
-                  </a>{" "}
+                  </Link>{" "}
                   và{" "}
-                  <a className="text-white font-bold hover:underline" href="#">
+                  <Link
+                    to="/privacy"
+                    className="text-white font-bold hover:underline"
+                  >
                     Chính sách bảo mật
-                  </a>
+                  </Link>
                   .
                 </span>
               </label>
 
               {/* Submit Button */}
               <button
-                className="mt-4 flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-primary hover:bg-red-600 text-white text-base font-bold tracking-wide shadow-lg shadow-primary/30 transition-all hover:scale-[1.01] active:scale-[0.98]"
+                className="mt-4 flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-primary hover:bg-red-600 text-white text-base font-bold tracking-wide shadow-lg shadow-primary/30 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 type="submit"
+                disabled={isLoading}
               >
-                Đăng ký ngay
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white mr-2"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Đang đăng ký...
+                  </>
+                ) : (
+                  "Đăng ký ngay"
+                )}
               </button>
             </form>
 

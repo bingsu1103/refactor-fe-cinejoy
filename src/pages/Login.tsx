@@ -1,8 +1,79 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import authApi from "../services/api-auth";
+import { useAuth } from "../store/useAuth";
 
 const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+  const { setUser } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // Validation
+    if (!email.trim()) {
+      setError("Vui lòng nhập email hoặc số điện thoại");
+      return;
+    }
+    if (!password.trim()) {
+      setError("Vui lòng nhập mật khẩu");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await authApi.login(email, password);
+
+      if (response.statusCode === 200 || response.statusCode === 201) {
+        // Store access token
+        if (response.data?.accessToken) {
+          localStorage.setItem("access_token", response.data.accessToken);
+        }
+        if (rememberMe && response.data?.refreshToken) {
+          localStorage.setItem("refresh_token", response.data.refreshToken);
+        }
+
+        // Update auth store
+        if (response.data?.user) {
+          setUser(response.data.user);
+        }
+
+        // Navigate to home
+        navigate("/");
+      } else {
+        // Handle error from backend
+        const errorMessage =
+          typeof response.message === "string"
+            ? response.message
+            : response.error || "Đăng nhập thất bại. Vui lòng thử lại.";
+        setError(errorMessage);
+      }
+    } catch (err: unknown) {
+      console.error("Login error:", err);
+      if (err && typeof err === "object" && "response" in err) {
+        const axiosError = err as {
+          response?: { data?: { message?: string } };
+        };
+        setError(
+          axiosError.response?.data?.message ||
+            "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin."
+        );
+      } else {
+        setError("Có lỗi xảy ra. Vui lòng thử lại sau.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="relative min-h-screen w-full flex flex-col">
@@ -58,8 +129,18 @@ const Login: React.FC = () => {
                 </p>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg">
+                    error
+                  </span>
+                  {error}
+                </div>
+              )}
+
               {/* Form */}
-              <form className="flex flex-col gap-5">
+              <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
                 {/* Email Input */}
                 <div className="flex flex-col gap-2">
                   <label
@@ -73,6 +154,9 @@ const Login: React.FC = () => {
                     id="email"
                     placeholder="name@example.com"
                     type="text"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -92,6 +176,9 @@ const Login: React.FC = () => {
                       id="password"
                       placeholder="Nhập mật khẩu"
                       type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
                     />
                     <button
                       className="absolute right-0 top-0 h-full px-4 text-rose-300 hover:text-white transition-colors flex items-center justify-center"
@@ -111,25 +198,54 @@ const Login: React.FC = () => {
                     <input
                       className="w-4 h-4 rounded border-rose-900 bg-[#482329] text-primary focus:ring-offset-[#221013] focus:ring-primary"
                       type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
                     />
                     <span className="text-gray-300 group-hover:text-white transition-colors">
                       Ghi nhớ đăng nhập
                     </span>
                   </label>
-                  <a
+                  <Link
+                    to="/forgot-password"
                     className="text-primary hover:text-red-400 font-medium transition-colors"
-                    href="#"
                   >
                     Quên mật khẩu?
-                  </a>
+                  </Link>
                 </div>
 
                 {/* Submit Button */}
                 <button
-                  className="w-full h-12 bg-primary hover:bg-red-600 active:bg-red-700 text-white font-bold rounded-lg transition-all duration-200 shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mt-2"
+                  className="w-full h-12 bg-primary hover:bg-red-600 active:bg-red-700 text-white font-bold rounded-lg transition-all duration-200 shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   type="submit"
+                  disabled={isLoading}
                 >
-                  <span>Đăng nhập</span>
+                  {isLoading ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span>Đang đăng nhập...</span>
+                    </>
+                  ) : (
+                    <span>Đăng nhập</span>
+                  )}
                 </button>
 
                 {/* Social Login Divider */}

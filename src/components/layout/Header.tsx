@@ -1,10 +1,34 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../../store/useAuth";
+import authApi from "../../services/api-auth";
+
 const Header: React.FC = () => {
+  const { user, authenticated, clearUser } = useAuth();
+  const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      // Clear tokens and auth state regardless of API result
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      clearUser();
+      setShowDropdown(false);
+      navigate("/");
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-[#482329] bg-white dark:bg-[#221114]/90 backdrop-blur-md px-6 lg:px-10 py-3">
       <div className="flex items-center gap-8">
-        <a
+        <Link
           className="flex items-center gap-3 text-gray-900 dark:text-white group"
-          href="/"
+          to="/"
         >
           <div className="size-8 text-primary">
             <svg
@@ -28,32 +52,32 @@ const Header: React.FC = () => {
           <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">
             CineMovie
           </h2>
-        </a>
+        </Link>
         <nav className="hidden md:flex items-center gap-9">
-          <a
+          <Link
             className="text-gray-600 dark:text-gray-300 text-sm font-medium hover:text-primary transition-colors"
-            href="#"
+            to="/movie"
           >
             Phim
-          </a>
-          <a
+          </Link>
+          <Link
             className="text-gray-600 dark:text-gray-300 text-sm font-medium hover:text-primary transition-colors"
-            href="#"
+            to="/theater"
           >
             Rạp chiếu
-          </a>
-          <a
+          </Link>
+          <Link
             className="text-gray-600 dark:text-gray-300 text-sm font-medium hover:text-primary transition-colors"
-            href="#"
+            to="/news"
           >
             Tin tức
-          </a>
-          <a
+          </Link>
+          <Link
             className="text-gray-600 dark:text-gray-300 text-sm font-medium hover:text-primary transition-colors"
-            href="#"
+            to="/promotion"
           >
-            Thành viên
-          </a>
+            Khuyến mãi
+          </Link>
         </nav>
       </div>
       <div className="flex flex-1 justify-end gap-4 lg:gap-8">
@@ -70,9 +94,81 @@ const Header: React.FC = () => {
             />
           </div>
         </label>
-        <button className="flex shrink-0 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary hover:bg-red-700 transition-colors text-white text-sm font-bold leading-normal tracking-[0.015em]">
-          <span className="truncate">Đăng nhập</span>
-        </button>
+
+        {authenticated && user ? (
+          <div className="relative">
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex items-center gap-2 cursor-pointer group"
+            >
+              <div className="size-10 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-primary font-bold overflow-hidden">
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{user.username?.charAt(0).toUpperCase() || "U"}</span>
+                )}
+              </div>
+              <span className="hidden lg:block text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors">
+                {user.username}
+              </span>
+              <span className="material-symbols-outlined text-[18px] text-gray-500 dark:text-gray-400">
+                expand_more
+              </span>
+            </button>
+
+            {showDropdown && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowDropdown(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#2d1519] rounded-lg shadow-lg border border-gray-200 dark:border-[#482329] py-2 z-50">
+                  <Link
+                    to="/profile"
+                    onClick={() => setShowDropdown(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#482329] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      person
+                    </span>
+                    Tài khoản
+                  </Link>
+                  <Link
+                    to="/my-tickets"
+                    onClick={() => setShowDropdown(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#482329] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      confirmation_number
+                    </span>
+                    Vé của tôi
+                  </Link>
+                  <hr className="my-2 border-gray-200 dark:border-[#482329]" />
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-[#482329] transition-colors w-full"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      logout
+                    </span>
+                    Đăng xuất
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <Link
+            to="/login"
+            className="flex shrink-0 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary hover:bg-red-700 transition-colors text-white text-sm font-bold leading-normal tracking-[0.015em]"
+          >
+            Đăng nhập
+          </Link>
+        )}
       </div>
     </header>
   );
