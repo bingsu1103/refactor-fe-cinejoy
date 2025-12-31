@@ -28,5 +28,18 @@ const userApi = {
     const response = await axios.delete(`${backendUrl}/api/v1/users/${id}`);
     return response;
   },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const payload = {
+      currentPassword,
+      newPassword,
+    };
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.put(
+      `${backendUrl}/api/v1/users/me/password`,
+      payload
+    );
+    return response;
+  },
 };
 export default userApi;

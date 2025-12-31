@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../store/useAuth";
+import userApi from "../services/api-user";
+import authApi from "../services/api-auth";
 
 // Password strength levels
 type PasswordStrength = "weak" | "medium" | "strong" | "very-strong";
@@ -13,7 +15,7 @@ interface PasswordStrengthInfo {
 }
 
 const PasswordRecover: React.FC = () => {
-  const { user, authenticated, isLoading: authLoading } = useAuth();
+  const { user, authenticated, isLoading: authLoading, clearUser } = useAuth();
   const navigate = useNavigate();
 
   // Form states
@@ -33,6 +35,7 @@ const PasswordRecover: React.FC = () => {
     text: string;
   } | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   // Redirect if not authenticated (only after loading is complete)
   useEffect(() => {
@@ -135,25 +138,40 @@ const PasswordRecover: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // TODO: Implement API call to change password
-      // await authApi.changePassword({ currentPassword, newPassword });
+      // Call change password API
+      await userApi.changePassword(currentPassword, newPassword);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Logout immediately after success
+      try {
+        await authApi.logout();
+      } catch (err) {
+        console.error("Logout error:", err);
+      }
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      clearUser();
 
-      setMessage({ type: "success", text: "Đổi mật khẩu thành công!" });
+      // Show success popup (user is already logged out)
+      setShowSuccessPopup(true);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Change password error:", error);
+      const errorMessage =
+        error?.message || "Có lỗi xảy ra. Vui lòng thử lại sau.";
       setMessage({
         type: "error",
-        text: "Có lỗi xảy ra. Vui lòng thử lại sau.",
+        text: errorMessage,
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle redirect to login (user is already logged out)
+  const handleRedirectToLogin = () => {
+    navigate("/login");
   };
 
   // Handle cancel
@@ -433,6 +451,33 @@ const PasswordRecover: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* Success Popup Modal */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#2f161a] rounded-2xl border border-[#482329] p-8 max-w-md w-full text-center shadow-2xl">
+            <div className="size-20 mx-auto mb-6 rounded-full bg-green-500/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-green-400 text-[48px]">
+                check_circle
+              </span>
+            </div>
+            <h2 className="text-white text-2xl font-bold mb-3">
+              Đổi mật khẩu thành công!
+            </h2>
+            <p className="text-[#c9929b] mb-8">
+              Mật khẩu của bạn đã được thay đổi. Vui lòng đăng nhập lại với mật
+              khẩu mới.
+            </p>
+            <button
+              onClick={handleRedirectToLogin}
+              className="w-full py-3 rounded-lg bg-primary hover:bg-red-600 text-white font-bold shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined">login</span>
+              Đăng nhập lại
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

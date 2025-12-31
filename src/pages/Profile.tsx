@@ -25,19 +25,13 @@ const menuItems: MenuItem[] = [
     id: "password",
     icon: "lock",
     label: "Đổi mật khẩu",
-    path: "/profile/password",
+    path: "/change-password",
   },
   {
     id: "tickets",
     icon: "confirmation_number",
     label: "Lịch sử đặt vé",
-    path: "/profile/tickets",
-  },
-  {
-    id: "payment",
-    icon: "credit_card",
-    label: "Phương thức thanh toán",
-    path: "/profile/payment",
+    path: "/booking-history",
   },
 ];
 
