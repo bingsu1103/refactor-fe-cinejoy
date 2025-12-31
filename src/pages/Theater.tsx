@@ -1,4 +1,91 @@
+import { useState, useEffect } from "react";
+import { Link } from "react-router";
+import theaterApi from "../services/api-theater";
+import { useDebounce } from "../hooks/useDebounce";
+
+// Theater interface based on API response
+interface ITheaterData {
+  id: number;
+  name: string;
+  address: {
+    id: number;
+    street_number: string;
+    street_name: string;
+    city: string;
+    createdAt: string;
+    updatedAt: string | null;
+    createdBy: string;
+    updatedBy: string | null;
+  };
+}
+
+// City filter options
+const cityOptions = [
+  { id: "all", name: "Tất cả" },
+  { id: "Ho Chi Minh", name: "TP. Hồ Chí Minh" },
+  { id: "Ha Noi", name: "Hà Nội" },
+  { id: "Da Nang", name: "Đà Nẵng" },
+  { id: "Can Tho", name: "Cần Thơ" },
+];
+
 const Theater: React.FC = () => {
+  const [theaters, setTheaters] = useState<ITheaterData[]>([]);
+  const [filteredTheaters, setFilteredTheaters] = useState<ITheaterData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCity, setSelectedCity] = useState("all");
+
+  // Debounce search query
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Fetch all theaters on mount
+  useEffect(() => {
+    const fetchTheaters = async () => {
+      setIsLoading(true);
+      try {
+        const response = await theaterApi.getAllTheaters(1, 100);
+        if (response.statusCode === 200 && response.data) {
+          const data = response.data?.data || response.data || [];
+          setTheaters(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error("Error fetching theaters:", error);
+        setTheaters([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTheaters();
+  }, []);
+
+  // Filter theaters based on search and city filter
+  useEffect(() => {
+    let filtered = [...theaters];
+
+    // Filter by search query
+    if (debouncedSearch.trim()) {
+      filtered = filtered.filter((theater) =>
+        theater.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+      );
+    }
+
+    // Filter by city
+    if (selectedCity !== "all") {
+      filtered = filtered.filter(
+        (theater) => theater.address?.city === selectedCity
+      );
+    }
+
+    setFilteredTheaters(filtered);
+  }, [theaters, debouncedSearch, selectedCity]);
+
+  // Get full address string
+  const getFullAddress = (address: ITheaterData["address"]) => {
+    if (!address) return "Chưa có địa chỉ";
+    return `${address.street_number} ${address.street_name}, ${address.city}`;
+  };
+
   return (
     <main className="flex-1 px-4 py-8 md:px-10 lg:px-40">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
@@ -21,6 +108,8 @@ const Theater: React.FC = () => {
                   <span className="material-symbols-outlined">search</span>
                 </div>
                 <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-full w-full border-none bg-transparent px-2 text-white placeholder-[#c9929b]/70 focus:ring-0 focus:outline-none text-base"
                   placeholder="Tìm kiếm rạp theo tên..."
                 />
@@ -43,536 +132,222 @@ const Theater: React.FC = () => {
               <span className="mr-2 text-sm font-bold text-[#c9929b]">
                 Khu vực:
               </span>
-              <button className="group flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-white ring-1 ring-white/10 transition-all">
-                <span className="text-sm font-bold">Tất cả</span>
-              </button>
-              <button className="group flex h-9 items-center gap-2 rounded-lg bg-[#482329] px-4 text-white ring-1 ring-white/5 hover:bg-[#5a2d35] transition-all">
-                <span className="text-sm font-medium">Hà Nội</span>
-              </button>
-              <button className="group flex h-9 items-center gap-2 rounded-lg bg-[#482329] px-4 text-white ring-1 ring-white/5 hover:bg-[#5a2d35] transition-all">
-                <span className="text-sm font-medium">TP. Hồ Chí Minh</span>
-              </button>
-              <button className="group flex h-9 items-center gap-2 rounded-lg bg-[#482329] px-4 text-white ring-1 ring-white/5 hover:bg-[#5a2d35] transition-all">
-                <span className="text-sm font-medium">Đà Nẵng</span>
-              </button>
-              <button className="group flex h-9 items-center gap-2 rounded-lg bg-[#482329] px-4 text-white ring-1 ring-white/5 hover:bg-[#5a2d35] transition-all">
-                <span className="text-sm font-medium">Cần Thơ</span>
-              </button>
-            </div>
-
-            {/* Brand Chips */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-2 text-sm font-bold text-[#c9929b]">
-                Hệ thống:
-              </span>
-              <button className="flex h-9 items-center rounded-lg bg-primary/10 border border-primary/40 px-4 text-primary transition-all">
-                <span className="text-sm font-bold">CGV Cinemas</span>
-              </button>
-              <button className="flex h-9 items-center rounded-lg bg-[#482329] px-4 text-[#c9929b] hover:text-white hover:bg-[#5a2d35] transition-all">
-                <span className="text-sm font-medium">Lotte Cinema</span>
-              </button>
-              <button className="flex h-9 items-center rounded-lg bg-[#482329] px-4 text-[#c9929b] hover:text-white hover:bg-[#5a2d35] transition-all">
-                <span className="text-sm font-medium">Galaxy Cinema</span>
-              </button>
-              <button className="flex h-9 items-center rounded-lg bg-[#482329] px-4 text-[#c9929b] hover:text-white hover:bg-[#5a2d35] transition-all">
-                <span className="text-sm font-medium">BHD Star</span>
-              </button>
+              {cityOptions.map((city) => (
+                <button
+                  key={city.id}
+                  onClick={() => setSelectedCity(city.id)}
+                  className={`group flex h-9 items-center gap-2 rounded-lg px-4 ring-1 transition-all ${
+                    selectedCity === city.id
+                      ? "bg-primary text-white ring-white/10"
+                      : "bg-[#482329] text-white ring-white/5 hover:bg-[#5a2d35]"
+                  }`}
+                >
+                  <span
+                    className={`text-sm ${
+                      selectedCity === city.id ? "font-bold" : "font-medium"
+                    }`}
+                  >
+                    {city.name}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </section>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-4">
+              <svg
+                className="animate-spin h-12 w-12 text-primary"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <p className="text-[#c9929b] text-sm">
+                Đang tải danh sách rạp...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && filteredTheaters.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <span className="material-symbols-outlined text-5xl text-[#c9929b]">
+              theaters
+            </span>
+            <h3 className="text-white text-lg font-bold">
+              Không tìm thấy rạp chiếu phim
+            </h3>
+            <p className="text-[#c9929b] text-sm text-center">
+              {searchQuery
+                ? `Không có rạp nào phù hợp với "${searchQuery}"`
+                : "Hãy thử thay đổi bộ lọc để tìm rạp phù hợp"}
+            </p>
+          </div>
+        )}
+
         {/* Cinema List Grid */}
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-2">
-          {/* Card 1 - CGV Vincom Đồng Khởi */}
-          <article className="group flex flex-col overflow-hidden rounded-2xl bg-[#2a171a] border border-[#482329] hover:border-primary/50 transition-all shadow-xl">
-            {/* Cinema Header */}
-            <div className="flex items-start justify-between gap-4 p-5">
-              <div className="flex gap-4">
-                <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-white p-1">
-                  <img
-                    alt="CGV Logo"
-                    className="h-full w-full object-contain"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2rXgOFhh_1FbA9sketLetIqBiuDmeDpu6fasicFhsNd-HpJxAnxVrjB8qI28G_A2Lmx-KFAXdUE3bt38h-aJG9xMmEsIe6HOSJV6zOtelwKUlnCc2Swl1CyLubaBTKKO2jpPSVWEnfZtqVQJaV9MtCOSPo1jhW0qauTcvp_TDuCPie1iXO3v9TIExh6xBi9UXIG82ry9825abs1Td5vu8Twxou5SubjrAC88zWi3NRjtNBNx-oDplf0CUgwWWOw_hh93qN8xbHJw"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors">
-                    CGV Vincom Đồng Khởi
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[#c9929b]">
-                    <span className="material-symbols-outlined text-[16px]">
-                      location_on
-                    </span>
-                    <p className="text-sm font-medium line-clamp-1">
-                      Tầng 3, TTTM Vincom Center B, 72 Lê Thánh Tôn, P. Bến
-                      Nghé, Q.1
-                    </p>
+        {!isLoading && filteredTheaters.length > 0 && (
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-2">
+            {filteredTheaters.map((theater) => (
+              <article
+                key={theater.id}
+                className="group flex flex-col overflow-hidden rounded-2xl bg-[#2a171a] border border-[#482329] hover:border-primary/50 transition-all shadow-xl"
+              >
+                {/* Cinema Header */}
+                <div className="flex items-start justify-between gap-4 p-5">
+                  <div className="flex gap-4">
+                    <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                      <span className="material-symbols-outlined text-2xl">
+                        movie
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors">
+                        {theater.name}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-[#c9929b]">
+                        <span className="material-symbols-outlined text-[16px]">
+                          location_on
+                        </span>
+                        <p className="text-sm font-medium line-clamp-1">
+                          {getFullAddress(theater.address)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="inline-flex items-center gap-1 rounded bg-[#3a1d21] px-2 py-0.5 text-xs font-medium text-primary">
+                          <span className="material-symbols-outlined text-[12px]">
+                            near_me
+                          </span>
+                          {theater.address?.city || "N/A"}
+                        </span>
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span
+                              key={star}
+                              className={`material-symbols-outlined text-[14px] ${
+                                star <= 4 ? "text-yellow-500" : "text-[#482329]"
+                              }`}
+                            >
+                              star
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="inline-flex items-center gap-1 rounded bg-[#3a1d21] px-2 py-0.5 text-xs font-medium text-primary">
-                      <span className="material-symbols-outlined text-[12px]">
-                        near_me
-                      </span>{" "}
-                      1.2 km
+                  <button className="hidden sm:flex size-10 items-center justify-center rounded-full bg-[#482329] text-white hover:bg-primary transition-colors">
+                    <span className="material-symbols-outlined">
+                      favorite_border
                     </span>
-                    <div className="flex gap-0.5">
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
+                  </button>
+                </div>
+
+                <div className="h-px bg-[#482329] mx-5"></div>
+
+                {/* Theater Info Section */}
+                <div className="flex flex-col gap-3 p-5 pt-4">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-[#c9929b]">
+                    Thông tin rạp
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2 text-[#c9929b]">
+                      <span className="material-symbols-outlined text-lg">
+                        home
                       </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
+                      <span className="text-sm">
+                        Địa chỉ:{" "}
+                        <span className="text-white">
+                          {theater.address?.street_number || "N/A"}
+                        </span>
                       </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
+                    </div>
+                    <div className="flex items-center gap-2 text-[#c9929b]">
+                      <span className="material-symbols-outlined text-lg">
+                        signpost
                       </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
+                      <span className="text-sm">
+                        Đường:{" "}
+                        <span className="text-white">
+                          {theater.address?.street_name || "N/A"}
+                        </span>
                       </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star_half
+                    </div>
+                    <div className="flex items-center gap-2 text-[#c9929b]">
+                      <span className="material-symbols-outlined text-lg">
+                        location_city
+                      </span>
+                      <span className="text-sm">
+                        Thành phố:{" "}
+                        <span className="text-white">
+                          {theater.address?.city || "N/A"}
+                        </span>
                       </span>
                     </div>
                   </div>
                 </div>
-              </div>
-              <button className="hidden sm:flex size-10 items-center justify-center rounded-full bg-[#482329] text-white hover:bg-primary transition-colors">
-                <span className="material-symbols-outlined">
-                  favorite_border
-                </span>
-              </button>
-            </div>
 
-            <div className="h-px bg-[#482329] mx-5"></div>
-
-            {/* Now Showing Section */}
-            <div className="flex flex-col gap-3 p-5 pt-4">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#c9929b]">
-                Suất chiếu sắp tới
-              </h4>
-
-              {/* Movie Item 1 */}
-              <div className="flex gap-4">
-                <div className="w-16 shrink-0 overflow-hidden rounded-lg aspect-[2/3]">
-                  <img
-                    alt="Dune Movie Poster"
-                    className="h-full w-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAc4vcqa2ChZTkA1XbnUW3_M6t_NW44moDCjPUq1_JMbjUYPbqK0ttMxjIU-J4QBZiFYx3vlm88e0u6Lttz4vf58dWj5g7idPzPpKBYMUSZ2qkS7omD9PWwDnxyYVmZL8TL1xyC0jUu4TYdQPpAkVcIqT49fDYxoFU5Pxr7QJhTMXXNoNNFBMJukTU0jl52c6HmW6agOVWeXcJBuLSLiUX3urnJh1mvOd-N627Qqrz6hSqi3vngwFmoat5gUFK7XUD6KMV4_n2WTZ8"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col justify-center gap-2">
-                  <h5 className="text-base font-bold text-white">
-                    Dune: Hành Tinh Cát - Phần 2
-                  </h5>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      19:30
-                    </button>
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      20:15
-                    </button>
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      21:45
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Movie Item 2 */}
-              <div className="flex gap-4 mt-2">
-                <div className="w-16 shrink-0 overflow-hidden rounded-lg aspect-[2/3]">
-                  <img
-                    alt="Kung Fu Panda Poster"
-                    className="h-full w-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfX4RJPN7sSIzf9CfYZq2fEljwSDq-HMFXCcCoRj_pW3xfMeHG-v7zablYaFUrRr4sXLMt6OPvZci_uUxqPEPCAGgBW0DJMnz4pHgEnNJatLLf9urP145LL1nnH66WHmg6fTeeYk5YxHIjj091uJnOAHpAYbWVoP2Hk3m01l9FM7qWUVIEzMKE86Z42d2OcaSj7zGv28WCL25XNSPq7mp-Nq25w-zwizwsDBDkCzf21HyINKKCvcX3WdUe-BwGTFa-W6oxVYBAQPU"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col justify-center gap-2">
-                  <h5 className="text-base font-bold text-white">
-                    Kung Fu Panda 4
-                  </h5>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      18:45
-                    </button>
-                    <button className="rounded px-3 py-1.5 border border-[#482329] text-sm font-medium text-[#c9929b]/50 cursor-not-allowed">
-                      20:00 (Hết)
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Footer */}
-            <div className="mt-auto flex items-center justify-between border-t border-[#482329] bg-[#221114]/50 px-5 py-3">
-              <a
-                className="text-sm font-medium text-[#c9929b] hover:text-white transition-colors"
-                href="#"
-              >
-                Xem bản đồ
-              </a>
-              <button className="flex items-center gap-1 text-sm font-bold text-primary hover:text-red-400 transition-colors">
-                Xem chi tiết rạp{" "}
-                <span className="material-symbols-outlined text-[18px]">
-                  arrow_forward
-                </span>
-              </button>
-            </div>
-          </article>
-
-          {/* Card 2 - Lotte Cinema Diamond */}
-          <article className="group flex flex-col overflow-hidden rounded-2xl bg-[#2a171a] border border-[#482329] hover:border-primary/50 transition-all shadow-xl">
-            {/* Cinema Header */}
-            <div className="flex items-start justify-between gap-4 p-5">
-              <div className="flex gap-4">
-                <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-white p-1">
-                  <img
-                    alt="Lotte Logo"
-                    className="h-full w-full object-contain"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5andnBUYsyS5rVcxf8suZ514bhdpYUQty7eUdWmP6FEf_inIdki9a6vqY6dogmSBZkB6FNnXx0uVyvTA9kpXOi5dyY6SnttA9DQHlETFJ1SEqIfi4Azq4Ag351MvlO0Q2O9dO2Z9g3QQUeVTiPQN6SWI_LyHfmiztpW-Dto-vbXn40AnGtMXqAkvsknCax0QZoGyjkwi0b7SHezpwd2y51TuVzGZJxCosOaOi9mBjxMnNTVyDZgjZX0uoIv6eXwiUXlRKtqywbpk"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors">
-                    Lotte Cinema Diamond
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[#c9929b]">
-                    <span className="material-symbols-outlined text-[16px]">
-                      location_on
+                {/* Card Footer */}
+                <div className="mt-auto flex items-center justify-between border-t border-[#482329] bg-[#221114]/50 px-5 py-3">
+                  <a
+                    className="text-sm font-medium text-[#c9929b] hover:text-white transition-colors"
+                    href="#"
+                  >
+                    Xem bản đồ
+                  </a>
+                  <Link
+                    to={`/theater/${theater.id}`}
+                    className="flex items-center gap-1 text-sm font-bold text-primary hover:text-red-400 transition-colors"
+                  >
+                    Xem chi tiết rạp{" "}
+                    <span className="material-symbols-outlined text-[18px]">
+                      arrow_forward
                     </span>
-                    <p className="text-sm font-medium line-clamp-1">
-                      Tầng 13, Diamond Plaza, 34 Lê Duẩn, Q.1
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="inline-flex items-center gap-1 rounded bg-[#3a1d21] px-2 py-0.5 text-xs font-medium text-primary">
-                      <span className="material-symbols-outlined text-[12px]">
-                        near_me
-                      </span>{" "}
-                      2.5 km
-                    </span>
-                    <div className="flex gap-0.5">
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-[#482329]">
-                        star
-                      </span>
-                    </div>
-                  </div>
+                  </Link>
                 </div>
-              </div>
-              <button className="hidden sm:flex size-10 items-center justify-center rounded-full bg-[#482329] text-white hover:bg-primary transition-colors">
-                <span className="material-symbols-outlined">
-                  favorite_border
-                </span>
-              </button>
-            </div>
+              </article>
+            ))}
+          </section>
+        )}
 
-            <div className="h-px bg-[#482329] mx-5"></div>
-
-            {/* Now Showing Section */}
-            <div className="flex flex-col gap-3 p-5 pt-4">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#c9929b]">
-                Suất chiếu sắp tới
-              </h4>
-
-              {/* Movie Item 1 */}
-              <div className="flex gap-4">
-                <div className="w-16 shrink-0 overflow-hidden rounded-lg aspect-[2/3]">
-                  <img
-                    alt="Mai Movie Poster"
-                    className="h-full w-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoTPDS2PVrlqxdQN_agvdLJxImG78iphGscxF07cO4ETrU5waCG5fg-LJ00yjzQ26GDm7KX9cH1_VzIGBUIu0e452SObb0sKUbWBl9egSYI0g4O8m05aGivjFzQ8lPOyROEsdTqyn5nLl5t5DzwX6l-0iMsd4Qre845kk1-FxM25L05-Ds1oivWvulo6zHZjbBfgmSHfyLPgMhtO3MN9F-ofg9K5-a6FCrPCiLCxVJ1qkrx0OOjmF-1VBOcq2P74ww2FSXCPOtNv0"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col justify-center gap-2">
-                  <h5 className="text-base font-bold text-white">Mai</h5>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      19:00
-                    </button>
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      21:30
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Movie Item 2 */}
-              <div className="flex gap-4 mt-2">
-                <div className="w-16 shrink-0 overflow-hidden rounded-lg aspect-[2/3]">
-                  <img
-                    alt="Ghostbusters Poster"
-                    className="h-full w-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFHgdEhBgc3n8Gv-Fnddj1oIUl6I8fvUAml_eP3ecn7HXiPSXq8mylleTReZK7Y10EvQDgoLWainJFlLozjjDcZWRBfpDzXBo8jNb-A5ovHzhXby3NN6obcLVpIlpYrePY1urrVxFOsCtRMf-n9bDq6y9DRPobALJ9lQZMbpxqp5WnwuyM5qHf0jvBmWQCv3gvB878nQwrZAWM1-7eRfXLNKl4eSyhq0_0uvfMYPTY6SQg810ribIlIJmRWomngpyjzModoYpvjOk"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col justify-center gap-2">
-                  <h5 className="text-base font-bold text-white">
-                    Biệt Đội Săn Ma
-                  </h5>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      20:45
-                    </button>
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      23:00
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Footer */}
-            <div className="mt-auto flex items-center justify-between border-t border-[#482329] bg-[#221114]/50 px-5 py-3">
-              <a
-                className="text-sm font-medium text-[#c9929b] hover:text-white transition-colors"
-                href="#"
-              >
-                Xem bản đồ
-              </a>
-              <button className="flex items-center gap-1 text-sm font-bold text-primary hover:text-red-400 transition-colors">
-                Xem chi tiết rạp{" "}
-                <span className="material-symbols-outlined text-[18px]">
-                  arrow_forward
-                </span>
-              </button>
-            </div>
-          </article>
-
-          {/* Card 3 - Galaxy Nguyễn Du */}
-          <article className="group flex flex-col overflow-hidden rounded-2xl bg-[#2a171a] border border-[#482329] hover:border-primary/50 transition-all shadow-xl">
-            {/* Cinema Header */}
-            <div className="flex items-start justify-between gap-4 p-5">
-              <div className="flex gap-4">
-                <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-white p-1">
-                  <img
-                    alt="Galaxy Logo"
-                    className="h-full w-full object-contain"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWaThBYpQPeMTqHdtt7OW51ZTYIGIfcg2v04qsdzFVQ3bOE-er1Uv27uIdwFhpnJ8puy_cjr4JkbCyvPL-OWcQDmLnasj_CUh0W4zzgj9Y8WoZoCq_odtwTQ5MVZO661KVvMeQtLvf7xc-l3-6ks1OLYXcvIjCG_EMKEPLYUlOtb6wtcJ0B9NaC35Dy-O22QCQxntnIXtKfvV5v598wrQfMqEqX06UKadhe4fBQ31gSY4PxnOOHIfXc_5UVMEPMVh7UYQDvSzho-w"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors">
-                    Galaxy Nguyễn Du
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[#c9929b]">
-                    <span className="material-symbols-outlined text-[16px]">
-                      location_on
-                    </span>
-                    <p className="text-sm font-medium line-clamp-1">
-                      116 Nguyễn Du, Quận 1, TP.HCM
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="inline-flex items-center gap-1 rounded bg-[#3a1d21] px-2 py-0.5 text-xs font-medium text-primary">
-                      <span className="material-symbols-outlined text-[12px]">
-                        near_me
-                      </span>{" "}
-                      0.8 km
-                    </span>
-                    <div className="flex gap-0.5">
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button className="hidden sm:flex size-10 items-center justify-center rounded-full bg-[#482329] text-white hover:bg-primary transition-colors">
-                <span className="material-symbols-outlined">
-                  favorite_border
-                </span>
-              </button>
-            </div>
-
-            <div className="h-px bg-[#482329] mx-5"></div>
-
-            {/* Now Showing Section */}
-            <div className="flex flex-col gap-3 p-5 pt-4">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#c9929b]">
-                Suất chiếu sắp tới
-              </h4>
-
-              {/* Movie Item 1 */}
-              <div className="flex gap-4">
-                <div className="w-16 shrink-0 overflow-hidden rounded-lg aspect-[2/3]">
-                  <img
-                    alt="Godzilla Poster"
-                    className="h-full w-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBShLhWORVmjIOiI8q5_ul8LWlaUCrpN-XWdkTikmjsvRHA7QGy79f2NVG9Z0_z6_UQLxEIm7AIZ6vVBKJkIOWV01Yq6VHDiXxutFu86-nUYh_mbG0RtxalQAAFSlCWUV3gLnZO8_nyz7Emh5_mfQ6Mal7gJQyFDgKPC0Qm3F1o5TlMFq4xaBvUkzAohmx_tysp9ZV6KKHMURIHeRXKqoS4XJZ24xXFiJBUhCX96ae-2Aqdb91ljDb-9ma53X567NCBkQrZO2yMp9U"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col justify-center gap-2">
-                  <h5 className="text-base font-bold text-white">
-                    Godzilla x Kong: Đế Chế Mới
-                  </h5>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      18:15
-                    </button>
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      20:30
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Footer */}
-            <div className="mt-auto flex items-center justify-between border-t border-[#482329] bg-[#221114]/50 px-5 py-3">
-              <a
-                className="text-sm font-medium text-[#c9929b] hover:text-white transition-colors"
-                href="#"
-              >
-                Xem bản đồ
-              </a>
-              <button className="flex items-center gap-1 text-sm font-bold text-primary hover:text-red-400 transition-colors">
-                Xem chi tiết rạp{" "}
-                <span className="material-symbols-outlined text-[18px]">
-                  arrow_forward
-                </span>
-              </button>
-            </div>
-          </article>
-
-          {/* Card 4 - BHD Star Bitexco */}
-          <article className="group flex flex-col overflow-hidden rounded-2xl bg-[#2a171a] border border-[#482329] hover:border-primary/50 transition-all shadow-xl">
-            {/* Cinema Header */}
-            <div className="flex items-start justify-between gap-4 p-5">
-              <div className="flex gap-4">
-                <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-white p-1">
-                  <img
-                    alt="BHD Star Logo"
-                    className="h-full w-full object-contain"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVa4f-8zmJHKq6ilLzIyTE0Horv85SmST40gwKtbtpxnp5bAPln3rXuxxvzH36Q9Kao6dTumZT2H7EJ0fvETI9hg37uSepqaveja7zadBLnUTKu4-W1WbZ40SMv12F8faDodjHtp7FtEvtYsrbqg5HLTBLrAZBUZNK79ZWrknjxyEcM-HX7dqE_axnJqn8YDnTpZS_snUCWOCNHjY8y2KQe3wYFfEKqb7_NLPmxZxe0Pn7Asbb6b-3Ok0qiTmHPa4CNXNW0D7CeJU"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors">
-                    BHD Star Bitexco
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[#c9929b]">
-                    <span className="material-symbols-outlined text-[16px]">
-                      location_on
-                    </span>
-                    <p className="text-sm font-medium line-clamp-1">
-                      Tầng 3 &amp; 4, Bitexco ICON 68, 2 Hải Triều, Q.1
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="inline-flex items-center gap-1 rounded bg-[#3a1d21] px-2 py-0.5 text-xs font-medium text-primary">
-                      <span className="material-symbols-outlined text-[12px]">
-                        near_me
-                      </span>{" "}
-                      1.5 km
-                    </span>
-                    <div className="flex gap-0.5">
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-yellow-500">
-                        star
-                      </span>
-                      <span className="material-symbols-outlined text-[14px] text-[#482329]">
-                        star
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button className="hidden sm:flex size-10 items-center justify-center rounded-full bg-[#482329] text-white hover:bg-primary transition-colors">
-                <span className="material-symbols-outlined">
-                  favorite_border
-                </span>
-              </button>
-            </div>
-
-            <div className="h-px bg-[#482329] mx-5"></div>
-
-            {/* Now Showing Section */}
-            <div className="flex flex-col gap-3 p-5 pt-4">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#c9929b]">
-                Suất chiếu sắp tới
-              </h4>
-
-              {/* Movie Item 1 */}
-              <div className="flex gap-4">
-                <div className="w-16 shrink-0 overflow-hidden rounded-lg aspect-[2/3]">
-                  <img
-                    alt="Exhuma Poster"
-                    className="h-full w-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCj8ueu_BImKs1qBMzSKB_3jlUay7690fDP6wGKiOoSl-iix-57N38fNXC5y1E_ycOWw7_4KxTDfOUEpuj_4LwpYhZOQogmMm51xO0HHA-z7PRuUTM46oRcQpCbw7bz9mXwnLDi7IAPfk82pxgN0KhCUBOVlQJYZXe2uMUTfyru9gr2dVUgUAqwmTakz7Fo3_1tDXN3XMiZTdxnGlMoA0o_HocrP-IcsxZPCjUSVdrUaQJoT4WfF6eMPX-GTakyUutPOLFBIPWz24o"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col justify-center gap-2">
-                  <h5 className="text-base font-bold text-white">
-                    Quật Mộ Trùng Ma
-                  </h5>
-                  <div className="flex flex-wrap gap-2">
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      19:10
-                    </button>
-                    <button className="rounded px-3 py-1.5 bg-[#482329] text-sm font-medium text-white hover:bg-primary transition-colors">
-                      21:50
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Footer */}
-            <div className="mt-auto flex items-center justify-between border-t border-[#482329] bg-[#221114]/50 px-5 py-3">
-              <a
-                className="text-sm font-medium text-[#c9929b] hover:text-white transition-colors"
-                href="#"
-              >
-                Xem bản đồ
-              </a>
-              <button className="flex items-center gap-1 text-sm font-bold text-primary hover:text-red-400 transition-colors">
-                Xem chi tiết rạp{" "}
-                <span className="material-symbols-outlined text-[18px]">
-                  arrow_forward
-                </span>
-              </button>
-            </div>
-          </article>
-        </section>
-
-        {/* Pagination / Load More */}
-        <div className="flex justify-center py-4">
-          <button className="flex items-center gap-2 rounded-xl bg-[#482329] px-8 py-3 text-white transition-colors hover:bg-[#5a2d35]">
-            <span className="font-bold">Xem thêm 4 rạp khác</span>
-            <span className="material-symbols-outlined">expand_more</span>
-          </button>
-        </div>
+        {/* Theater Count */}
+        {!isLoading && filteredTheaters.length > 0 && (
+          <div className="flex justify-center py-4">
+            <p className="text-[#c9929b] text-sm">
+              Hiển thị{" "}
+              <span className="text-white font-bold">
+                {filteredTheaters.length}
+              </span>{" "}
+              rạp chiếu phim
+              {selectedCity !== "all" && (
+                <>
+                  {" "}
+                  tại{" "}
+                  <span className="text-white font-bold">
+                    {cityOptions.find((c) => c.id === selectedCity)?.name}
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );
