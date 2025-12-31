@@ -5,10 +5,14 @@ import addDays from "../utils/render-day-review";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const showtimeApi = {
-  getAll: (page: number, size: number) => {
-    return axios.get(
-      `${backendUrl}/api/v1/showtimes?page=${page}&size=${size}`
-    );
+  getAllShowTimes: (page: number, size: number) => {
+    const payload = {
+      page,
+      size,
+    };
+    return axios.get(`${backendUrl}/api/v1/showtimes`, {
+      params: payload,
+    });
   },
 
   create: (data: any) => {

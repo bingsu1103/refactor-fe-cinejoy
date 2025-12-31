@@ -36,5 +36,15 @@ const addressApi = {
     );
     return response;
   },
+
+  updateAddress: async (id: number, data: any) => {
+    const payload = {
+      id,
+      ...data,
+    };
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.put(`${backendUrl}/api/v1/addresses`, payload);
+    return response;
+  },
 };
 export default addressApi;

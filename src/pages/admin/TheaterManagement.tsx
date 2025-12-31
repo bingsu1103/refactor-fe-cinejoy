@@ -71,7 +71,10 @@ const TheaterManagement: React.FC = () => {
 
   useEffect(() => {
     const fetchAllLocation = async () => {
-      const response = await addressApi.getAllAddresses();
+      const response = await addressApi.getAllAddresses(
+        currentPage - 1,
+        PAGE_SIZE
+      );
       setAddresses(response.data.data);
     };
     fetchAllLocation();

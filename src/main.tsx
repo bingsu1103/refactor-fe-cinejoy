@@ -22,6 +22,10 @@ import MovieDetail from "./pages/MovieDetail.tsx";
 import UserManagement from "./pages/admin/UserManagement.tsx";
 import TheaterManagement from "./pages/admin/TheaterManagement.tsx";
 import ShowtimeManagement from "./pages/admin/ShowtimeManagement.tsx";
+import FilmManagement from "./pages/admin/FilmManagement.tsx";
+import AddressManagement from "./pages/admin/AddressManagement.tsx";
+import BookingManagement from "./pages/admin/BookingManagement.tsx";
+import AuditoriumManagement from "./pages/admin/AuditoriumManagement.tsx";
 
 const router = createBrowserRouter([
   {
@@ -105,6 +109,22 @@ const router = createBrowserRouter([
       {
         path: "showtimes",
         element: <ShowtimeManagement />,
+      },
+      {
+        path: "films",
+        element: <FilmManagement />,
+      },
+      {
+        path: "addresses",
+        element: <AddressManagement />,
+      },
+      {
+        path: "bookings",
+        element: <BookingManagement />,
+      },
+      {
+        path: "auditoriums",
+        element: <AuditoriumManagement />,
       },
     ],
   },

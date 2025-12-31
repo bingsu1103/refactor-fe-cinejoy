@@ -7,5 +7,26 @@ const userApi = {
     );
     return response;
   },
+  getUserById: async (id: number) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.get(`${backendUrl}/api/v1/users/${id}`);
+    return response;
+  },
+
+  updateUser: async (id: number, user: any) => {
+    const payload = {
+      id,
+      ...user,
+    };
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.put(`${backendUrl}/api/v1/users`, payload);
+    return response;
+  },
+
+  deleteUser: async (id: number) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.delete(`${backendUrl}/api/v1/users/${id}`);
+    return response;
+  },
 };
 export default userApi;

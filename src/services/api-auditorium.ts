@@ -26,6 +26,26 @@ const auditoriumApi = {
     );
     return response;
   },
+  createAuditorium: async (data: { number: number; theaterId: number }) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.post(`${backendUrl}/api/v1/auditoriums`, data);
+    return response;
+  },
+
+  getAuditoriumsByTheater: async (theaterId: number) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.get(
+      `${backendUrl}/api/v1/auditoriums/theater/${theaterId}`
+    );
+    return response;
+  },
+  deleteAuditorium: async (id: number) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.delete(
+      `${backendUrl}/api/v1/auditoriums/${id}`
+    );
+    return response;
+  },
 };
 
 export default auditoriumApi;

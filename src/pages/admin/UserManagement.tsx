@@ -42,40 +42,39 @@ const SIZE = 5;
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [open, setOpen] = useState(false);
+  const [openCreate, setOpenCreate] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const [form] = Form.useForm();
+  const [createForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await userApi.getAllUsers(currentPage, SIZE);
+      const apiData = res.data;
+      setUsers(apiData.data);
+      setTotalPages(apiData.meta.totalPages);
+    } catch (err) {
+      console.error("Fetch users failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-
-        const res = await userApi.getAllUsers(currentPage, SIZE);
-
-        const apiData = res.data;
-
-        setUsers(apiData.data);
-        setTotalPages(apiData.meta.totalPages);
-      } catch (err) {
-        console.error("Fetch users failed:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUsers();
   }, [currentPage]);
 
+  // Create user
   const handleCreateUser = async () => {
     try {
-      const values = await form.validateFields();
-      console.log("Create user:", values);
-
+      const values = await createForm.validateFields();
       const res = await authApi.register(
         values.username,
         values.email,
@@ -85,14 +84,69 @@ const UserManagement: React.FC = () => {
       );
       if (res.statusCode === 201) {
         message.success("Tạo user thành công!");
+        fetchUsers();
       } else {
         message.error("Tạo user thất bại!");
       }
-
-      setOpen(false);
-      form.resetFields();
+      setOpenCreate(false);
+      createForm.resetFields();
     } catch (err) {
       console.log("Validate failed:", err);
+    }
+  };
+
+  // Open Edit Modal
+  const handleOpenEdit = (user: User) => {
+    setEditingUser(user);
+    editForm.setFieldsValue({
+      username: user.username,
+      phone: user.phone,
+      role: user.role,
+    });
+    setOpenEdit(true);
+  };
+
+  // Update user
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const values = await editForm.validateFields();
+      const res = await userApi.updateUser(editingUser.id, {
+        username: values.username,
+        phone: values.phone,
+        role: values.role,
+      });
+
+      if (res.statusCode === 200) {
+        message.success("Cập nhật user thành công!");
+        fetchUsers();
+      } else {
+        message.error("Cập nhật user thất bại!");
+      }
+
+      setOpenEdit(false);
+      setEditingUser(null);
+      editForm.resetFields();
+    } catch (err) {
+      console.error("Update failed:", err);
+      message.error("Cập nhật user thất bại!");
+    }
+  };
+
+  // Delete user
+  const handleDeleteUser = async (id: number) => {
+    try {
+      const res = await userApi.deleteUser(id);
+      if (res.statusCode === 200) {
+        message.success("Xóa user thành công!");
+        fetchUsers();
+      } else {
+        message.error("Xóa user thất bại!");
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+      message.error("Xóa user thất bại!");
     }
   };
 
@@ -147,16 +201,20 @@ const UserManagement: React.FC = () => {
       align: "left" as const,
       render: (_: unknown, record: User) => (
         <Space>
-          <Button icon={<EditOutlined />} type="text" />
+          <Button
+            icon={<EditOutlined />}
+            type="text"
+            onClick={() => handleOpenEdit(record)}
+          />
 
           <Popconfirm
-            title="Delete user"
-            description="Are you sure you want to delete this user?"
+            title="Xóa user"
+            description="Bạn có chắc muốn xóa user này?"
             icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
-            okText="Delete"
+            okText="Xóa"
             okButtonProps={{ danger: true }}
-            cancelText="Cancel"
-            // onConfirm={() => handleDelete(record.id)}
+            cancelText="Hủy"
+            onConfirm={() => handleDeleteUser(record.id)}
           >
             <Button danger type="text" icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -185,7 +243,7 @@ const UserManagement: React.FC = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => setOpen(true)}
+          onClick={() => setOpenCreate(true)}
         >
           New User
         </Button>
@@ -226,20 +284,24 @@ const UserManagement: React.FC = () => {
 
       {/* MODAL CREATE USER */}
       <Modal
-        open={open}
-        onCancel={() => setOpen(false)}
-        title="Create User"
-        okText="Create"
+        open={openCreate}
+        onCancel={() => {
+          setOpenCreate(false);
+          createForm.resetFields();
+        }}
+        title="Tạo User Mới"
+        okText="Tạo"
+        cancelText="Hủy"
         destroyOnClose
         onOk={handleCreateUser}
       >
-        <Form layout="vertical" form={form}>
+        <Form layout="vertical" form={createForm}>
           <Form.Item
             label="Username"
             name="username"
             rules={[{ required: true, message: "Username is required" }]}
           >
-            <Input />
+            <Input placeholder="Nhập username" />
           </Form.Item>
 
           <Form.Item
@@ -247,14 +309,15 @@ const UserManagement: React.FC = () => {
             name="email"
             rules={[{ required: true, message: "Email is required" }]}
           >
-            <Input />
+            <Input placeholder="Nhập email" />
           </Form.Item>
+
           <Form.Item
             label="Password"
             name="password"
             rules={[{ required: true, message: "Password is required" }]}
           >
-            <Input.Password />
+            <Input.Password placeholder="Nhập password" />
           </Form.Item>
 
           <Form.Item
@@ -262,12 +325,75 @@ const UserManagement: React.FC = () => {
             name="phone"
             rules={[{ required: true, message: "Phone is required" }]}
           >
-            <Input />
+            <Input placeholder="Nhập số điện thoại" />
           </Form.Item>
 
-          <Form.Item label="Role" name="role" rules={[{ required: true }]}>
-            <Select>
+          <Form.Item
+            label="Role"
+            name="role"
+            rules={[{ required: true, message: "Role is required" }]}
+          >
+            <Select placeholder="Chọn role">
               <Select.Option value="CUSTOMER">CUSTOMER</Select.Option>
+              <Select.Option value="ADMIN">ADMIN</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* MODAL EDIT USER */}
+      <Modal
+        open={openEdit}
+        onCancel={() => {
+          setOpenEdit(false);
+          setEditingUser(null);
+          editForm.resetFields();
+        }}
+        title="Cập Nhật User"
+        okText="Cập nhật"
+        cancelText="Hủy"
+        destroyOnClose
+        onOk={handleUpdateUser}
+      >
+        <Form layout="vertical" form={editForm}>
+          {/* Show email as read-only info */}
+          {editingUser && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                background: "#f5f5f5",
+                borderRadius: 8,
+              }}
+            >
+              <Text type="secondary">Email: </Text>
+              <Text strong>{editingUser.email}</Text>
+            </div>
+          )}
+
+          <Form.Item
+            label="Username"
+            name="username"
+            rules={[{ required: true, message: "Username is required" }]}
+          >
+            <Input placeholder="Nhập username" />
+          </Form.Item>
+
+          <Form.Item
+            label="Phone"
+            name="phone"
+            rules={[{ required: true, message: "Phone is required" }]}
+          >
+            <Input placeholder="Nhập số điện thoại" />
+          </Form.Item>
+
+          <Form.Item
+            label="Role"
+            name="role"
+            rules={[{ required: true, message: "Role is required" }]}
+          >
+            <Select placeholder="Chọn role">
+              <Select.Option value="USER">USER</Select.Option>
               <Select.Option value="ADMIN">ADMIN</Select.Option>
             </Select>
           </Form.Item>
