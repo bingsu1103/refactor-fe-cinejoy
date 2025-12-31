@@ -19,6 +19,9 @@ import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AuthProvider from "./components/context/AuthProvider.tsx";
 import "./styles/global.css";
 import MovieDetail from "./pages/MovieDetail.tsx";
+import UserManagement from "./pages/admin/UserManagement.tsx";
+import TheaterManagement from "./pages/admin/TheaterManagement.tsx";
+import ShowtimeManagement from "./pages/admin/ShowtimeManagement.tsx";
 
 const router = createBrowserRouter([
   {
@@ -91,7 +94,18 @@ const router = createBrowserRouter([
         index: true,
         element: <AdminDashboard />,
       },
-      // More admin pages will be added here
+      {
+        path: "users",
+        element: <UserManagement />,
+      },
+      {
+        path: "theaters",
+        element: <TheaterManagement />,
+      },
+      {
+        path: "showtimes",
+        element: <ShowtimeManagement />,
+      },
     ],
   },
 ]);
