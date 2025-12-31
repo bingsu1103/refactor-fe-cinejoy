@@ -1,12 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../../store/useAuth";
 import authApi from "../../services/api-auth";
+import filmApi from "../../services/api-film";
+import { useDebounce } from "../../hooks/useDebounce";
 
 const Header: React.FC = () => {
   const { user, authenticated, clearUser } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
+
+  // Search states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<IFilm[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Debounce search query with 300ms delay
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const handleLogout = async () => {
     try {
@@ -14,7 +26,6 @@ const Header: React.FC = () => {
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
-      // Clear tokens and auth state regardless of API result
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       clearUser();
@@ -22,6 +33,69 @@ const Header: React.FC = () => {
       navigate("/");
     }
   };
+
+  // Perform search when debounced query changes
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!debouncedSearchQuery.trim()) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const response = await filmApi.getAllFilms(1, 4, debouncedSearchQuery);
+        if (response.statusCode === 200) {
+          const data = response.data?.data || response.data || [];
+          setSearchResults(Array.isArray(data) ? data : []);
+          setShowSearchResults(true);
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    performSearch();
+  }, [debouncedSearchQuery]);
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Handle search result click
+  const handleResultClick = (filmId: number) => {
+    setShowSearchResults(false);
+    setSearchQuery("");
+    navigate(`/movie/${filmId}`);
+  };
+
+  // Handle search submit (Enter key)
+  const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      setShowSearchResults(false);
+      navigate(`/movie?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-[#482329] bg-white dark:bg-[#221114]/90 backdrop-blur-md px-6 lg:px-10 py-3">
@@ -81,19 +155,117 @@ const Header: React.FC = () => {
         </nav>
       </div>
       <div className="flex flex-1 justify-end gap-4 lg:gap-8">
-        <label className="hidden sm:flex flex-col min-w-40 !h-10 max-w-64">
-          <div className="flex w-full flex-1 items-stretch rounded-lg h-full relative">
+        {/* Search Box */}
+        <div
+          ref={searchRef}
+          className="hidden sm:block relative min-w-40 max-w-64"
+        >
+          <div className="flex w-full flex-1 items-stretch rounded-lg h-10 relative">
             <div className="text-[#c9929b] flex border-none absolute left-0 top-0 bottom-0 items-center justify-center pl-3 z-10">
-              <span className="material-symbols-outlined text-[20px]">
-                search
-              </span>
+              {isSearching ? (
+                <svg
+                  className="animate-spin h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              ) : (
+                <span className="material-symbols-outlined text-[20px]">
+                  search
+                </span>
+              )}
             </div>
             <input
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchSubmit}
+              onFocus={() => searchQuery && setShowSearchResults(true)}
               className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-1 focus:ring-primary border-none bg-gray-100 dark:bg-[#482329] focus:border-none h-full placeholder:text-gray-400 dark:placeholder:text-[#c9929b] pl-10 pr-4 text-sm font-normal leading-normal transition-all"
-              placeholder="Tìm tên phim, rạp..."
+              placeholder="Tìm tên phim..."
             />
           </div>
-        </label>
+
+          {/* Search Results Dropdown */}
+          {showSearchResults && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowSearchResults(false)}
+              />
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#2d1519] rounded-lg shadow-xl border border-gray-200 dark:border-[#482329] overflow-hidden z-50 max-h-[400px] overflow-y-auto">
+                {searchResults.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 dark:text-[#c9929b]">
+                    {isSearching ? (
+                      "Đang tìm kiếm..."
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-2xl mb-2 block">
+                          search_off
+                        </span>
+                        Không tìm thấy phim "{searchQuery}"
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-[#c9929b] uppercase tracking-wider border-b border-gray-200 dark:border-[#482329]">
+                      Kết quả tìm kiếm ({searchResults.length})
+                    </div>
+                    {searchResults.map((film) => (
+                      <button
+                        key={film.id}
+                        onClick={() => handleResultClick(film.id)}
+                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-[#482329] transition-colors text-left"
+                      >
+                        <div className="size-12 rounded-lg bg-gray-200 dark:bg-[#482329] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <span className="material-symbols-outlined text-gray-400 dark:text-[#c9929b]">
+                            movie
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                            {film.name}
+                          </h4>
+                          <p className="text-xs text-gray-500 dark:text-[#c9929b] truncate">
+                            {film.genre} • {film.duration} phút
+                          </p>
+                        </div>
+                        <span className="material-symbols-outlined text-gray-400 dark:text-[#c9929b] text-lg">
+                          arrow_forward
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setShowSearchResults(false);
+                        navigate(
+                          `/movie?search=${encodeURIComponent(searchQuery)}`
+                        );
+                      }}
+                      className="w-full p-3 text-center text-sm text-primary hover:bg-gray-100 dark:hover:bg-[#482329] transition-colors border-t border-gray-200 dark:border-[#482329]"
+                    >
+                      Xem tất cả kết quả →
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         {authenticated && user ? (
           <div className="relative">

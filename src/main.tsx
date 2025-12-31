@@ -11,6 +11,7 @@ import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import Payment from "./pages/Payment.tsx";
 import Booking from "./pages/Booking.tsx";
+import Profile from "./pages/Profile.tsx";
 import "./styles/global.css";
 import MovieDetail from "./pages/MovieDetail.tsx";
 
@@ -50,6 +51,10 @@ const router = createBrowserRouter([
       {
         path: "booking/:movieId",
         element: <Booking />,
+      },
+      {
+        path: "profile",
+        element: <Profile />,
       },
       // {
       //   path: "/about",
