@@ -1,6 +1,96 @@
-import { Link } from "react-router";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
+import seatApi from "../services/api-seat";
+
+interface PaymentState {
+  movie: IFilm;
+  cinema: ITheater;
+  showtime: IShowtime;
+  seats: ISeat[];
+  totalPrice: number;
+  holdTime: number;
+}
 
 const Payment: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = location.state as PaymentState | null;
+
+  // Timer state - 5 minutes countdown
+  const [timeRemaining, setTimeRemaining] = useState(state?.holdTime || 300);
+  const [isReleasingSeats, setIsReleasingSeats] = useState(false);
+
+  // Redirect if no state
+  useEffect(() => {
+    if (!state) {
+      navigate("/booking");
+    }
+  }, [state, navigate]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!state || timeRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          // Time's up - release seats and redirect
+          handleTimeOut();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [state, timeRemaining]);
+
+  // Format time
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Handle timeout - release seats
+  const handleTimeOut = async () => {
+    try {
+      await seatApi.removeHoldSeat();
+    } catch (error) {
+      console.error("Error releasing seats on timeout:", error);
+    }
+    alert("Hết thời gian giữ ghế! Vui lòng đặt vé lại.");
+    navigate("/booking");
+  };
+
+  // Handle back button - release seats and go back
+  const handleBack = async () => {
+    setIsReleasingSeats(true);
+    try {
+      await seatApi.removeHoldSeat();
+    } catch (error) {
+      console.error("Error releasing seats:", error);
+    } finally {
+      setIsReleasingSeats(false);
+      navigate("/booking");
+    }
+  };
+
+  // Handle cancel
+  const handleCancel = async () => {
+    if (
+      confirm("Bạn có chắc muốn hủy đặt vé? Ghế đã chọn sẽ được giải phóng.")
+    ) {
+      await handleBack();
+    }
+  };
+
+  if (!state) {
+    return null;
+  }
+
+  const { movie, cinema, showtime, seats, totalPrice } = state;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#221013] text-white">
       {/* Header */}
@@ -20,13 +110,26 @@ const Payment: React.FC = () => {
             </svg>
           </div>
           <h2 className="text-white text-xl font-bold leading-tight tracking-tight">
-            CinemaPlus
+            CineMovie
           </h2>
         </Link>
 
         <div className="flex items-center gap-6">
+          {/* Timer */}
+          <div
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
+              timeRemaining <= 60
+                ? "bg-red-500/20 border-red-500 text-red-400"
+                : "bg-primary/10 border-primary/20 text-primary"
+            }`}
+          >
+            <span className="material-symbols-outlined">timer</span>
+            <span className="font-bold">{formatTime(timeRemaining)}</span>
+          </div>
+
+          {/* Steps */}
           <div className="hidden md:flex items-center gap-2 text-sm font-medium text-[#c9929b]">
-            <span className="text-primary">1. Tài khoản</span>
+            <span className="text-primary">1. Chọn ghế</span>
             <span className="material-symbols-outlined text-base">
               chevron_right
             </span>
@@ -36,15 +139,19 @@ const Payment: React.FC = () => {
             </span>
             <span>3. Hoàn tất</span>
           </div>
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-sm font-medium text-[#c9929b] hover:text-white transition-colors"
+
+          {/* Back Button */}
+          <button
+            onClick={handleBack}
+            disabled={isReleasingSeats}
+            className="flex items-center gap-2 text-sm font-medium text-[#c9929b] hover:text-white transition-colors disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-lg">
               arrow_back
             </span>
-            <span>Quay lại</span>
-          </Link>
+            <span>{isReleasingSeats ? "Đang xử lý..." : "Quay lại"}</span>
+          </button>
+
           <div className="flex items-center justify-center size-8 rounded-full bg-[#33191e]/50 text-white">
             <span className="material-symbols-outlined text-lg">lock</span>
           </div>
@@ -84,7 +191,6 @@ const Payment: React.FC = () => {
                       className="w-full h-12 rounded-lg border border-[#67323b] bg-[#33191e] px-4 pl-11 text-white placeholder-slate-400 focus:border-primary focus:ring-primary"
                       placeholder="Nhập họ và tên"
                       type="text"
-                      defaultValue="Nguyễn Văn A"
                     />
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#c9929b]">
                       person
@@ -100,7 +206,6 @@ const Payment: React.FC = () => {
                       className="w-full h-12 rounded-lg border border-[#67323b] bg-[#33191e] px-4 pl-11 text-white placeholder-slate-400 focus:border-primary focus:ring-primary"
                       placeholder="Nhập email"
                       type="email"
-                      defaultValue="nguyenvana@gmail.com"
                     />
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#c9929b]">
                       mail
@@ -188,58 +293,104 @@ const Payment: React.FC = () => {
           {/* Right Column: Order Summary */}
           <div className="lg:col-span-5">
             <div className="sticky top-6 rounded-2xl border border-[#67323b] bg-[#33191e] overflow-hidden shadow-xl">
-              {/* Movie/Plan Info */}
-              <div className="relative h-48 w-full overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-[#33191e] to-transparent opacity-90 z-10"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent mix-blend-overlay z-10"></div>
-                <img
-                  alt="Rạp chiếu phim hiện đại với ánh sáng đỏ"
-                  className="h-full w-full object-cover"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtbW0NVNYF2CEKi1QIOW1C_ghGxn1iQCxBKOnag_r2CXD8YoUC4UBEm3zYv8aS1BFahtzalNvkUR-_xR5uQTB74X8UWqVjCIn4jqBkeC7IWAswCAu_JLETL4DduSF8xKhT9WiaLtEpB4brpXoEXNy51jKeDwdoobwt1_OXOJMzpYc8a-mxkfjUZu0FmuPQU0MfP2oR5T6KTLUmykiaxb0GyRKhuQPs9Pek5rC5OrpJyxf_xhLhsS723vG_BTNZ_op0dX7xhfruJuo"
-                />
-                <div className="absolute bottom-4 left-4 right-4 z-20 flex items-end gap-4">
-                  <div className="h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-white/20 shadow-lg">
-                    <img
-                      alt="Poster phim"
-                      className="h-full w-full object-cover"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPyRzQ9Ieg34_ZOi6Rt_H40-Q78JcgHc151MxCcmAtcmt_cCz1cbQawwADj_drTuY4wUFvCiun6hYn0Uka-exw59S1V3YRGFnkmBPhwsXyt25mKelxowAjTx2omG0IiWDOOjdyuJoDmHgqpkLk7rgm5Myt68-VogKsWCwnpaqFkqe4SNJ1ngJWqb-1GbEtJKlK4rc1HtV25zE-AxgZeohCqKG8ZD24MsMkK2RceO2NS_T7RBbkgvakg9AxHo7MWNbK0k9QBaSIfqc"
-                    />
-                  </div>
-                  <div className="flex flex-col pb-1">
-                    <h4 className="text-white text-lg font-bold line-clamp-1">
-                      Gói Premium 1 Tháng
-                    </h4>
-                    <p className="text-white/80 text-sm">Chất lượng 4K HDR</p>
-                  </div>
+              {/* Movie Info */}
+              <div className="relative h-48 w-full overflow-hidden bg-gradient-to-tr from-gray-900 via-[#3a1c21] to-black">
+                <div className="absolute inset-0 flex items-center justify-center text-white/10">
+                  <span className="material-symbols-outlined !text-8xl">
+                    movie
+                  </span>
+                </div>
+                <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/90 to-transparent">
+                  <h4 className="text-white text-lg font-bold line-clamp-1">
+                    {movie?.name || "N/A"}
+                  </h4>
+                  <p className="text-white/80 text-sm">
+                    {movie?.language} • {movie?.genre}
+                  </p>
                 </div>
               </div>
 
-              {/* Breakdown */}
+              {/* Booking Details */}
               <div className="p-6 flex flex-col gap-4">
+                {/* Cinema & Showtime */}
+                <div className="pb-4 border-b border-slate-800">
+                  <div className="flex items-start gap-2 mb-2">
+                    <span className="material-symbols-outlined text-primary text-sm mt-0.5">
+                      location_on
+                    </span>
+                    <div>
+                      <p className="text-white text-sm font-bold">
+                        {cinema?.name || "N/A"}
+                      </p>
+                      <p className="text-[#c9929b] text-xs">
+                        Phòng {showtime?.auditorium?.number || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="material-symbols-outlined text-primary text-sm mt-0.5">
+                      calendar_today
+                    </span>
+                    <div>
+                      <p className="text-white text-sm font-bold">
+                        {showtime?.date
+                          ? new Date(showtime.date).toLocaleDateString(
+                              "vi-VN",
+                              {
+                                weekday: "long",
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              }
+                            )
+                          : "N/A"}
+                      </p>
+                      <p className="text-[#c9929b] text-xs">
+                        Suất: {showtime?.startTime?.slice(0, 5) || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seats */}
+                <div className="flex justify-between items-start pb-4 border-b border-slate-800">
+                  <div>
+                    <p className="text-[#c9929b] text-xs mb-1">Ghế đã chọn:</p>
+                    <div className="flex gap-1 flex-wrap">
+                      {seats?.map((seat) => (
+                        <span
+                          key={seat.id}
+                          className="text-white text-sm font-bold bg-gray-800 px-2 py-0.5 rounded border border-gray-700"
+                        >
+                          {seat.seatRow}
+                          {seat.number}
+                        </span>
+                      )) || "N/A"}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[#c9929b] text-xs mb-1">Số lượng:</p>
+                    <p className="text-white text-sm font-medium">
+                      {seats?.length || 0} vé
+                    </p>
+                  </div>
+                </div>
+
+                {/* Price Breakdown */}
                 <div className="flex justify-between items-center pb-4 border-b border-slate-800">
                   <span className="text-[#c9929b] text-sm">Đơn giá</span>
-                  <span className="text-white font-medium">200.000đ</span>
+                  <span className="text-white font-medium">
+                    {movie?.price?.toLocaleString() || 0}đ
+                  </span>
                 </div>
-                <div className="flex justify-between items-center pb-4 border-b border-slate-800">
-                  <span className="text-[#c9929b] text-sm">Thuế VAT (8%)</span>
-                  <span className="text-white font-medium">16.000đ</span>
-                </div>
-                <div className="flex justify-between items-center pb-4 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[#c9929b] text-sm">Giảm giá</span>
-                    <span className="bg-green-500/10 text-green-500 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">
-                      PROMO
-                    </span>
-                  </div>
-                  <span className="text-green-500 font-medium">-16.000đ</span>
-                </div>
+
                 {/* Total */}
                 <div className="flex justify-between items-end pt-2">
                   <span className="text-white text-lg font-bold">
                     Tổng thanh toán
                   </span>
                   <span className="text-primary text-2xl font-black tracking-tight">
-                    200.000đ
+                    {totalPrice?.toLocaleString() || 0}đ
                   </span>
                 </div>
               </div>
@@ -247,9 +398,12 @@ const Payment: React.FC = () => {
               {/* Actions */}
               <div className="p-6 pt-0 flex flex-col gap-3">
                 <button className="flex w-full items-center justify-center rounded-lg bg-primary py-4 text-white font-bold text-base hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
-                  Thanh toán 200.000đ
+                  Thanh toán {totalPrice?.toLocaleString() || 0}đ
                 </button>
-                <button className="flex w-full items-center justify-center rounded-lg bg-white/5 py-3 text-[#c9929b] font-medium text-sm hover:bg-white/10 transition-colors">
+                <button
+                  onClick={handleCancel}
+                  className="flex w-full items-center justify-center rounded-lg bg-white/5 py-3 text-[#c9929b] font-medium text-sm hover:bg-white/10 transition-colors"
+                >
                   Hủy bỏ
                 </button>
               </div>
@@ -262,7 +416,7 @@ const Payment: React.FC = () => {
       <footer className="mt-auto border-t border-[#67323b] py-8 px-6 bg-[#33191e]">
         <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[#c9929b] text-sm">
-            © 2024 CinemaPlus. All rights reserved.
+            © 2024 CineMovie. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link

@@ -109,7 +109,7 @@ declare global {
     id: number;
     seatRow: string;
     number: number;
-    status: "AVAILABLE" | "SOLD" | "RESERVED";
+    status: "AVAILABLE" | "SOLD" | "RESERVED" | "HOLD";
     seatVariantName: "REG" | "VIP";
   }
 

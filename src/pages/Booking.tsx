@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import addressApi from "../services/api-address";
 import showtimeApi from "../services/api-showtime";
 import auditoriumApi from "../services/api-auditorium";
+import seatApi from "../services/api-seat";
 
 // Extended seat type for UI state
 interface SeatWithSelection extends ISeat {
@@ -37,9 +38,7 @@ const Booking: React.FC = () => {
   const [loadingTheaters, setLoadingTheaters] = useState(false);
   const [loadingShowtimes, setLoadingShowtimes] = useState(false);
   const [loadingSeats, setLoadingSeats] = useState(false);
-
-  // Timer state
-  const [timeRemaining, setTimeRemaining] = useState(300);
+  const [isHoldingSeats, setIsHoldingSeats] = useState(false);
 
   // Get selected seats
   const selectedSeats = seats.filter((seat) => seat.isSelected);
@@ -147,7 +146,6 @@ const Booking: React.FC = () => {
     setLoadingSeats(true);
     setSeats([]);
     setCurrentStep(4);
-    setTimeRemaining(300); // Reset timer
 
     try {
       const response = await auditoriumApi.getAllByOfAuditorium(auditoriumId);
@@ -210,43 +208,37 @@ const Booking: React.FC = () => {
     );
   };
 
-  // Timer countdown
-  useEffect(() => {
-    if (selectedSeats.length === 0) return;
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 0) {
-          // Reset selection when time runs out
-          setSeats((s) => s.map((seat) => ({ ...seat, isSelected: false })));
-          return 300;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [selectedSeats.length]);
-
-  // Format time
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  // Handle payment
-  const handlePayment = () => {
+  // Handle next - hold seats and navigate to payment
+  const handleNext = async () => {
     if (selectedSeats.length === 0 || !selectedShowtime) return;
-    navigate("/payment", {
-      state: {
-        movie: filmInfo,
-        cinema: selectedTheater,
-        showtime: selectedShowtime,
-        seats: selectedSeats,
-        totalPrice,
-      },
-    });
+
+    setIsHoldingSeats(true);
+    try {
+      // Call hold seat API
+      const seatIds = selectedSeats.map((seat) => seat.id);
+      const response = await seatApi.holdSeat(selectedShowtime.id, seatIds);
+
+      if (response.statusCode === 200 || response.statusCode === 201) {
+        // Navigate to payment page with booking info
+        navigate("/payment", {
+          state: {
+            movie: filmInfo,
+            cinema: selectedTheater,
+            showtime: selectedShowtime,
+            seats: selectedSeats,
+            totalPrice,
+            holdTime: 300, // 5 minutes in seconds
+          },
+        });
+      } else {
+        alert("Không thể giữ ghế. Vui lòng thử lại.");
+      }
+    } catch (error) {
+      console.error("Error holding seats:", error);
+      alert("Đã xảy ra lỗi khi giữ ghế. Vui lòng thử lại.");
+    } finally {
+      setIsHoldingSeats(false);
+    }
   };
 
   // Group seats by row
@@ -266,7 +258,11 @@ const Booking: React.FC = () => {
     const baseClasses =
       "size-8 md:size-9 rounded-t-lg rounded-b-md transition-all focus:outline-none flex items-center justify-center text-xs font-bold";
 
-    if (seat.status === "SOLD" || seat.status === "RESERVED") {
+    if (
+      seat.status === "SOLD" ||
+      seat.status === "RESERVED" ||
+      seat.status === "HOLD"
+    ) {
       return (
         <button
           key={seat.id}
@@ -352,12 +348,6 @@ const Booking: React.FC = () => {
               </p>
             )}
           </div>
-          {selectedSeats.length > 0 && (
-            <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
-              <span className="material-symbols-outlined">timer</span>
-              <span>Thời gian giữ ghế: {formatTime(timeRemaining)}</span>
-            </div>
-          )}
         </div>
 
         {/* Step Progress */}
@@ -733,16 +723,44 @@ const Booking: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Payment Button */}
+                {/* Next Button */}
                 <button
-                  onClick={handlePayment}
-                  disabled={selectedSeats.length === 0}
+                  onClick={handleNext}
+                  disabled={selectedSeats.length === 0 || isHoldingSeats}
                   className="w-full h-12 rounded-lg bg-primary hover:bg-red-700 text-white font-bold text-base shadow-lg shadow-primary/30 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary"
                 >
-                  Thanh toán
-                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
-                    arrow_forward
-                  </span>
+                  {isHoldingSeats ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span>Đang xử lý...</span>
+                    </>
+                  ) : (
+                    <>
+                      Tiếp theo
+                      <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">
+                        arrow_forward
+                      </span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
