@@ -14,6 +14,9 @@ import Booking from "./pages/Booking.tsx";
 import Profile from "./pages/Profile.tsx";
 import BookingHistory from "./pages/BookingHistory.tsx";
 import PasswordRecover from "./pages/PasswordRecover.tsx";
+import AdminLayout from "./components/admin/AdminLayout.tsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
+import AuthProvider from "./components/context/AuthProvider.tsx";
 import "./styles/global.css";
 import MovieDetail from "./pages/MovieDetail.tsx";
 
@@ -66,26 +69,6 @@ const router = createBrowserRouter([
         path: "change-password",
         element: <PasswordRecover />,
       },
-      // {
-      //   path: "/about",
-      //   element: <About />,
-      // },
-      // {
-      //   path: "/movie",
-      //   element: <Movie />,
-      // },
-      // {
-      //   path: "/movie/:id",
-      //   element: <Movie />,
-      // },
-      // {
-      //   path: "/booking",
-      //   element: <Booking />,
-      // },
-      // {
-      //   path: "/checkout",
-      //   element: <Checkout />,
-      // },
     ],
   },
   {
@@ -100,48 +83,23 @@ const router = createBrowserRouter([
     path: "/payment",
     element: <Payment />,
   },
-  // {
-  //   path: "/admin",
-  //   element: <AdminLayout />,
-  //   children: [
-  //     {
-  //       index: true,
-  //       element: <AdminDashboard />,
-  //     },
-  //     {
-  //       path: "users",
-  //       element: <UserManagement />,
-  //     },
-  //     {
-  //       path: "theaters",
-  //       element: <TheaterManagement />,
-  //     },
-  //     {
-  //       path: "auditoriums",
-  //       element: <AuditoriumManagement />,
-  //     },
-  //     {
-  //       path: "films",
-  //       element: <FilmManagement />,
-  //     },
-  //     {
-  //       path: "showtimes",
-  //       element: <ShowtimeManagement />,
-  //     },
-  //     {
-  //       path: "addresses",
-  //       element: <AddressManagement />,
-  //     },
-  //     {
-  //       path: "bookings",
-  //       element: <BookingManagement />,
-  //     },
-  //   ],
-  // },
+  {
+    path: "/admin",
+    element: <AdminLayout />,
+    children: [
+      {
+        index: true,
+        element: <AdminDashboard />,
+      },
+      // More admin pages will be added here
+    ],
+  },
 ]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </StrictMode>
 );
