@@ -30,6 +30,7 @@ declare global {
     createdAt: string;
     updatedAt: string;
   }
+
   interface ReqFilm {
     name: string;
     duration: number;
@@ -39,5 +40,86 @@ declare global {
     language: string;
     release_date: string | Date;
     rating: number;
+  }
+
+  // Booking related types
+  interface IAddress {
+    id: number;
+    street_number: string;
+    street_name: string;
+    city: string;
+    createdAt?: string;
+    updatedAt?: string | null;
+    createdBy?: string;
+    updatedBy?: string | null;
+  }
+
+  interface ITheater {
+    id: number;
+    name: string;
+    address?: IAddress;
+    createdAt?: string;
+    updatedAt?: string | null;
+    createdBy?: string;
+    updatedBy?: string | null;
+  }
+
+  interface IAuditorium {
+    id: number;
+    theater: ITheater;
+    number: number;
+    totalSeats: number;
+    createdAt?: string;
+    updatedAt?: string | null;
+    createdBy?: string;
+    updatedBy?: string | null;
+  }
+
+  interface IFilm {
+    id: number;
+    name: string;
+    duration: number;
+    price: number;
+    description: string;
+    genre: string;
+    language: string;
+    releaseDate: string;
+    rating: number;
+    createdAt?: string;
+    updatedAt?: string | null;
+    createdBy?: string;
+    updatedBy?: string | null;
+  }
+
+  interface IShowtime {
+    id: number;
+    film: IFilm;
+    auditorium: IAuditorium;
+    date: string;
+    startTime: string;
+    endTime: string;
+    status: "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED";
+    createdAt?: string;
+    updatedAt?: string | null;
+    createdBy?: string;
+    updatedBy?: string | null;
+  }
+
+  interface ISeat {
+    id: number;
+    seatRow: string;
+    number: number;
+    status: "AVAILABLE" | "SOLD" | "RESERVED";
+    seatVariantName: "REG" | "VIP";
+  }
+
+  interface IPaginatedResponse<T> {
+    meta: {
+      currentPage: number;
+      pageSize: number;
+      totalPages: number;
+      totalItems: number;
+    };
+    data: T[];
   }
 }

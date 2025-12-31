@@ -1,106 +1,214 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import addressApi from "../services/api-address";
+import showtimeApi from "../services/api-showtime";
+import auditoriumApi from "../services/api-auditorium";
 
-// Types
-interface Cinema {
-  id: string;
-  name: string;
-  address: string;
-  showtimes: string[];
+// Extended seat type for UI state
+interface SeatWithSelection extends ISeat {
+  isSelected: boolean;
 }
-
-interface Seat {
-  id: string;
-  row: string;
-  number: number;
-  type: "standard" | "vip";
-  status: "available" | "sold" | "selected";
-}
-
-// Mock data
-const mockCinemas: Cinema[] = [
-  {
-    id: "1",
-    name: "CGV Vincom Đồng Khởi",
-    address: "72 Lê Thánh Tôn, Bến Nghé, Quận 1",
-    showtimes: ["19:30", "21:15", "23:00"],
-  },
-  {
-    id: "2",
-    name: "Galaxy Nguyễn Du",
-    address: "116 Nguyễn Du, Quận 1",
-    showtimes: ["18:45", "20:30"],
-  },
-  {
-    id: "3",
-    name: "BHD Star Bitexco",
-    address: "Tầng 3, 4 TTTM ICON 68, 2 Hải Triều",
-    showtimes: ["19:00", "22:15"],
-  },
-];
-
-const regions = [
-  { id: "hcm", name: "TP. Hồ Chí Minh", count: 12 },
-  { id: "hn", name: "Hà Nội", count: 8 },
-  { id: "dn", name: "Đà Nẵng", count: 3 },
-];
-
-// Generate initial seat map
-const generateSeats = (): Seat[] => {
-  const rows = ["A", "B", "C", "D", "E", "F", "G"];
-  const vipRows = ["F", "G"];
-  const soldSeats = ["B3", "B4", "B5"];
-  const seats: Seat[] = [];
-
-  rows.forEach((row) => {
-    for (let i = 1; i <= 10; i++) {
-      const id = `${row}${i}`;
-      seats.push({
-        id,
-        row,
-        number: i,
-        type: vipRows.includes(row) ? "vip" : "standard",
-        status: soldSeats.includes(id) ? "sold" : "available",
-      });
-    }
-  });
-
-  return seats;
-};
 
 const Booking: React.FC = () => {
   const { movieId } = useParams();
   const navigate = useNavigate();
 
-  const [selectedRegion, setSelectedRegion] = useState("hcm");
-  const [selectedCinema, setSelectedCinema] = useState<Cinema | null>(
-    mockCinemas[0]
-  );
-  const [selectedShowtime, setSelectedShowtime] = useState<string | null>(
-    "19:30"
-  );
-  const [seats, setSeats] = useState<Seat[]>(generateSeats());
-  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes in seconds
+  // Step states
+  const [currentStep, setCurrentStep] = useState(1);
 
-  // Movie info (mock data - would come from API based on movieId)
-  const movieInfo = {
-    title: "Avengers: Endgame",
-    format: "2D Phụ đề",
-    duration: "181 phút",
-    genres: "Hành động, Viễn tưởng",
-  };
+  // Data states
+  const [addresses, setAddresses] = useState<IAddress[]>([]);
+  const [theaters, setTheaters] = useState<ITheater[]>([]);
+  const [showtimes, setShowtimes] = useState<IShowtime[]>([]);
+  const [seats, setSeats] = useState<SeatWithSelection[]>([]);
 
-  // Price per ticket
-  const standardPrice = 90000;
-  const vipPrice = 110000;
+  // Selection states
+  const [selectedAddress, setSelectedAddress] = useState<IAddress | null>(null);
+  const [selectedTheater, setSelectedTheater] = useState<ITheater | null>(null);
+  const [selectedShowtime, setSelectedShowtime] = useState<IShowtime | null>(
+    null
+  );
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+
+  // Loading states
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [loadingTheaters, setLoadingTheaters] = useState(false);
+  const [loadingShowtimes, setLoadingShowtimes] = useState(false);
+  const [loadingSeats, setLoadingSeats] = useState(false);
+
+  // Timer state
+  const [timeRemaining, setTimeRemaining] = useState(300);
 
   // Get selected seats
-  const selectedSeats = seats.filter((seat) => seat.status === "selected");
+  const selectedSeats = seats.filter((seat) => seat.isSelected);
+
+  // Get film info from showtime
+  const filmInfo = selectedShowtime?.film;
 
   // Calculate total price
-  const totalPrice = selectedSeats.reduce((total, seat) => {
-    return total + (seat.type === "vip" ? vipPrice : standardPrice);
+  const totalPrice = selectedSeats.reduce((total) => {
+    return total + (filmInfo?.price || 0);
   }, 0);
+
+  // Generate date options (today + next 6 days)
+  const dateOptions = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
+    return {
+      value: date.toISOString().split("T")[0],
+      label: date.toLocaleDateString("vi-VN", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+      }),
+    };
+  });
+
+  // Fetch addresses on mount
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      setLoadingAddresses(true);
+      try {
+        const response = await addressApi.getAllAddresses(1, 100);
+        if (response.statusCode === 200) {
+          // Handle paginated response
+          const data = response.data?.data || response.data || [];
+          setAddresses(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+      } finally {
+        setLoadingAddresses(false);
+      }
+    };
+    fetchAddresses();
+  }, []);
+
+  // Fetch theaters when address is selected
+  const fetchTheaters = useCallback(async (addressId: number) => {
+    setLoadingTheaters(true);
+    setTheaters([]);
+    setSelectedTheater(null);
+    setShowtimes([]);
+    setSelectedShowtime(null);
+    setSeats([]);
+    setCurrentStep(2);
+
+    try {
+      const response = await addressApi.getTheaterByAddress(addressId);
+      if (response.statusCode === 200) {
+        const data = response.data || [];
+        setTheaters(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error("Error fetching theaters:", error);
+    } finally {
+      setLoadingTheaters(false);
+    }
+  }, []);
+
+  // Fetch showtimes when theater is selected - accepts theaterId as parameter
+  const fetchShowtimes = useCallback(
+    async (filmId: number, date: string, theaterId: number) => {
+      setLoadingShowtimes(true);
+      setShowtimes([]);
+      setSelectedShowtime(null);
+      setSeats([]);
+      setCurrentStep(3);
+
+      try {
+        const response = await showtimeApi.getListShowtimeByFilmAndDate(
+          date,
+          filmId
+        );
+        if (response.statusCode === 200) {
+          const data = response.data?.data || response.data || [];
+          // Filter showtimes for selected theater using passed theaterId
+          const filteredShowtimes = Array.isArray(data)
+            ? data.filter(
+                (st: IShowtime) => st.auditorium?.theater?.id === theaterId
+              )
+            : [];
+          setShowtimes(filteredShowtimes);
+        }
+      } catch (error) {
+        console.error("Error fetching showtimes:", error);
+      } finally {
+        setLoadingShowtimes(false);
+      }
+    },
+    []
+  );
+
+  // Fetch seats when showtime is selected
+  const fetchSeats = useCallback(async (auditoriumId: number) => {
+    setLoadingSeats(true);
+    setSeats([]);
+    setCurrentStep(4);
+    setTimeRemaining(300); // Reset timer
+
+    try {
+      const response = await auditoriumApi.getAllByOfAuditorium(auditoriumId);
+      if (response.statusCode === 200) {
+        const data = response.data || [];
+        const seatsWithSelection: SeatWithSelection[] = (
+          Array.isArray(data) ? data : []
+        ).map((seat: ISeat) => ({
+          ...seat,
+          isSelected: false,
+        }));
+        setSeats(seatsWithSelection);
+      }
+    } catch (error) {
+      console.error("Error fetching seats:", error);
+    } finally {
+      setLoadingSeats(false);
+    }
+  }, []);
+
+  // Handle address selection
+  const handleAddressSelect = (address: IAddress) => {
+    setSelectedAddress(address);
+    fetchTheaters(address.id);
+  };
+
+  // Handle theater selection - automatically fetch showtimes with current date
+  const handleTheaterSelect = (theater: ITheater) => {
+    setSelectedTheater(theater);
+    // Use movieId from URL or default to 1 for testing
+    const filmId = movieId ? parseInt(movieId) : 1;
+    // Fetch showtimes immediately with the selected theater's ID
+    fetchShowtimes(filmId, selectedDate, theater.id);
+  };
+
+  // Handle date change
+  const handleDateChange = (date: string) => {
+    setSelectedDate(date);
+    if (selectedTheater) {
+      const filmId = movieId ? parseInt(movieId) : 1;
+      fetchShowtimes(filmId, date, selectedTheater.id);
+    }
+  };
+
+  // Handle showtime selection
+  const handleShowtimeSelect = (showtime: IShowtime) => {
+    setSelectedShowtime(showtime);
+    fetchSeats(showtime.auditorium.id);
+  };
+
+  // Handle seat click
+  const handleSeatClick = (seatId: number) => {
+    setSeats((prev) =>
+      prev.map((seat) => {
+        if (seat.id === seatId && seat.status === "AVAILABLE") {
+          return { ...seat, isSelected: !seat.isSelected };
+        }
+        return seat;
+      })
+    );
+  };
 
   // Timer countdown
   useEffect(() => {
@@ -110,7 +218,7 @@ const Booking: React.FC = () => {
       setTimeRemaining((prev) => {
         if (prev <= 0) {
           // Reset selection when time runs out
-          setSeats(generateSeats());
+          setSeats((s) => s.map((seat) => ({ ...seat, isSelected: false })));
           return 300;
         }
         return prev - 1;
@@ -127,34 +235,13 @@ const Booking: React.FC = () => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Handle seat click
-  const handleSeatClick = (seatId: string) => {
-    setSeats((prev) =>
-      prev.map((seat) => {
-        if (seat.id === seatId && seat.status !== "sold") {
-          return {
-            ...seat,
-            status: seat.status === "selected" ? "available" : "selected",
-          };
-        }
-        return seat;
-      })
-    );
-  };
-
-  // Handle cinema selection
-  const handleCinemaSelect = (cinema: Cinema) => {
-    setSelectedCinema(cinema);
-    setSelectedShowtime(cinema.showtimes[0]);
-  };
-
   // Handle payment
   const handlePayment = () => {
-    if (selectedSeats.length === 0) return;
+    if (selectedSeats.length === 0 || !selectedShowtime) return;
     navigate("/payment", {
       state: {
-        movie: movieInfo,
-        cinema: selectedCinema,
+        movie: filmInfo,
+        cinema: selectedTheater,
         showtime: selectedShowtime,
         seats: selectedSeats,
         totalPrice,
@@ -162,46 +249,49 @@ const Booking: React.FC = () => {
     });
   };
 
-  // Group seats by row for rendering
+  // Group seats by row
   const seatsByRow = seats.reduce(
     (acc, seat) => {
-      if (!acc[seat.row]) acc[seat.row] = [];
-      acc[seat.row].push(seat);
+      if (!acc[seat.seatRow]) acc[seat.seatRow] = [];
+      acc[seat.seatRow].push(seat);
       return acc;
     },
-    {} as Record<string, Seat[]>
+    {} as Record<string, SeatWithSelection[]>
   );
 
-  // Render seat button
-  const renderSeat = (seat: Seat) => {
-    const baseClasses =
-      "size-8 md:size-9 rounded-t-lg rounded-b-md transition-all focus:outline-none";
+  const rows = Object.keys(seatsByRow).sort();
 
-    if (seat.status === "sold") {
+  // Render seat button
+  const renderSeat = (seat: SeatWithSelection) => {
+    const baseClasses =
+      "size-8 md:size-9 rounded-t-lg rounded-b-md transition-all focus:outline-none flex items-center justify-center text-xs font-bold";
+
+    if (seat.status === "SOLD" || seat.status === "RESERVED") {
       return (
         <button
           key={seat.id}
           disabled
-          className={`${baseClasses} bg-gray-800/40 cursor-not-allowed border border-transparent opacity-50 flex items-center justify-center text-white/20`}
+          className={`${baseClasses} bg-gray-800/40 cursor-not-allowed border border-transparent opacity-50 text-white/20`}
         >
           <span className="material-symbols-outlined text-sm">close</span>
         </button>
       );
     }
 
-    if (seat.status === "selected") {
+    if (seat.isSelected) {
       return (
         <button
           key={seat.id}
           onClick={() => handleSeatClick(seat.id)}
-          className={`${baseClasses} bg-primary border-2 border-primary text-white text-xs font-bold shadow-[0_0_15px_rgba(236,19,55,0.6)] scale-110 relative z-10`}
+          className={`${baseClasses} bg-primary border-2 border-primary text-white shadow-[0_0_15px_rgba(236,19,55,0.6)] scale-110 relative z-10`}
         >
-          {seat.id}
+          {seat.seatRow}
+          {seat.number}
         </button>
       );
     }
 
-    if (seat.type === "vip") {
+    if (seat.seatVariantName === "VIP") {
       return (
         <button
           key={seat.id}
@@ -240,7 +330,9 @@ const Booking: React.FC = () => {
               Đặt vé
             </Link>
             <span className="text-[#c9929b]">/</span>
-            <span className="text-white font-medium">{movieInfo.title}</span>
+            <span className="text-white font-medium">
+              {filmInfo?.name || "Chọn phim"}
+            </span>
           </div>
         </div>
       </div>
@@ -251,11 +343,14 @@ const Booking: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
             <h1 className="text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em] mb-2">
-              Đặt vé: {movieInfo.title}
+              Đặt vé{filmInfo ? `: ${filmInfo.name}` : ""}
             </h1>
-            <p className="text-[#c9929b] text-base">
-              {movieInfo.format} • {movieInfo.duration} • {movieInfo.genres}
-            </p>
+            {filmInfo && (
+              <p className="text-[#c9929b] text-base">
+                {filmInfo.language} • {filmInfo.duration} phút •{" "}
+                {filmInfo.genre}
+              </p>
+            )}
           </div>
           {selectedSeats.length > 0 && (
             <div className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
@@ -265,154 +360,277 @@ const Booking: React.FC = () => {
           )}
         </div>
 
+        {/* Step Progress */}
+        <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
+          {[
+            { step: 1, label: "Chọn khu vực" },
+            { step: 2, label: "Chọn rạp" },
+            { step: 3, label: "Chọn suất chiếu" },
+            { step: 4, label: "Chọn ghế" },
+          ].map(({ step, label }) => (
+            <div key={step} className="flex items-center gap-2">
+              <div
+                className={`size-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                  currentStep >= step
+                    ? "bg-primary text-white"
+                    : "bg-gray-700 text-gray-400"
+                }`}
+              >
+                {step}
+              </div>
+              <span
+                className={`text-sm font-medium whitespace-nowrap ${
+                  currentStep >= step ? "text-white" : "text-gray-500"
+                }`}
+              >
+                {label}
+              </span>
+              {step < 4 && (
+                <div
+                  className={`w-8 h-0.5 ${
+                    currentStep > step ? "bg-primary" : "bg-gray-700"
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Filters & Cinema Selection */}
+          {/* Left Column: Selection Steps */}
           <div className="lg:col-span-3 flex flex-col gap-6">
-            {/* Region Filter */}
+            {/* Step 1: Address Selection */}
             <div className="flex flex-col gap-2">
-              <label className="text-white text-sm font-bold uppercase tracking-wider">
+              <label className="text-white text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                <span className="size-5 rounded-full bg-primary text-white text-xs flex items-center justify-center">
+                  1
+                </span>
                 Khu vực
               </label>
-              <div className="relative">
-                <select
-                  value={selectedRegion}
-                  onChange={(e) => setSelectedRegion(e.target.value)}
-                  className="w-full h-12 rounded-lg text-white focus:outline-0 focus:ring-1 focus:ring-primary border border-[#67323b] bg-[#33191e] px-4 appearance-none cursor-pointer"
-                >
-                  {regions.map((region) => (
-                    <option key={region.id} value={region.id}>
-                      {region.name} ({region.count})
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#c9929b] pointer-events-none">
-                  <span className="material-symbols-outlined">expand_more</span>
+              {loadingAddresses ? (
+                <div className="h-12 rounded-lg bg-[#33191e] flex items-center justify-center">
+                  <span className="text-[#c9929b] text-sm">Đang tải...</span>
                 </div>
-              </div>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={selectedAddress?.id || ""}
+                    onChange={(e) => {
+                      const addr = addresses.find(
+                        (a) => a.id === parseInt(e.target.value)
+                      );
+                      if (addr) handleAddressSelect(addr);
+                    }}
+                    className="w-full h-12 rounded-lg text-white focus:outline-0 focus:ring-1 focus:ring-primary border border-[#67323b] bg-[#33191e] px-4 appearance-none cursor-pointer"
+                  >
+                    <option value="">Chọn khu vực</option>
+                    {addresses.map((address) => (
+                      <option key={address.id} value={address.id}>
+                        {address.city} - {address.street_name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#c9929b] pointer-events-none">
+                    <span className="material-symbols-outlined">
+                      expand_more
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Cinema List */}
-            <div className="flex flex-col gap-2">
-              <label className="text-white text-sm font-bold uppercase tracking-wider">
-                Chọn Rạp
-              </label>
-              <div className="flex flex-col gap-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
-                {mockCinemas.map((cinema) => (
-                  <div
-                    key={cinema.id}
-                    onClick={() => handleCinemaSelect(cinema)}
-                    className={`p-4 rounded-xl border cursor-pointer group transition-all ${
-                      selectedCinema?.id === cinema.id
-                        ? "border-primary bg-[#3a1c21]"
-                        : "border-[#67323b] bg-[#33191e]/50 hover:bg-[#33191e] hover:border-[#c9929b]"
-                    }`}
-                  >
-                    <h3 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">
-                      {cinema.name}
-                    </h3>
-                    <p className="text-xs text-[#c9929b] mb-3 truncate">
-                      {cinema.address}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {cinema.showtimes.map((time) => (
-                        <button
-                          key={time}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCinema(cinema);
-                            setSelectedShowtime(time);
-                          }}
-                          className={`h-8 px-3 rounded text-xs font-medium transition-all ${
-                            selectedCinema?.id === cinema.id &&
-                            selectedShowtime === time
-                              ? "bg-primary text-white font-bold shadow-lg shadow-primary/20"
-                              : "bg-[#33191e] border border-[#67323b] text-[#c9929b] hover:border-primary hover:text-white"
-                          }`}
-                        >
-                          {time}
-                        </button>
-                      ))}
-                    </div>
+            {/* Step 2: Theater Selection */}
+            {currentStep >= 2 && (
+              <div className="flex flex-col gap-2">
+                <label className="text-white text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                  <span className="size-5 rounded-full bg-primary text-white text-xs flex items-center justify-center">
+                    2
+                  </span>
+                  Chọn Rạp
+                </label>
+                {loadingTheaters ? (
+                  <div className="h-24 rounded-lg bg-[#33191e] flex items-center justify-center">
+                    <span className="text-[#c9929b] text-sm">
+                      Đang tải rạp...
+                    </span>
                   </div>
-                ))}
+                ) : theaters.length === 0 ? (
+                  <div className="h-24 rounded-lg bg-[#33191e] flex items-center justify-center">
+                    <span className="text-[#c9929b] text-sm">
+                      Không có rạp nào
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                    {theaters.map((theater) => (
+                      <div
+                        key={theater.id}
+                        onClick={() => handleTheaterSelect(theater)}
+                        className={`p-4 rounded-xl border cursor-pointer group transition-all ${
+                          selectedTheater?.id === theater.id
+                            ? "border-primary bg-[#3a1c21]"
+                            : "border-[#67323b] bg-[#33191e]/50 hover:bg-[#33191e] hover:border-[#c9929b]"
+                        }`}
+                      >
+                        <h3 className="font-bold text-white mb-1 group-hover:text-primary transition-colors">
+                          {theater.name}
+                        </h3>
+                        {theater.address && (
+                          <p className="text-xs text-[#c9929b] truncate">
+                            {theater.address.street_number}{" "}
+                            {theater.address.street_name}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+
+            {/* Step 3: Date & Showtime Selection */}
+            {currentStep >= 3 && selectedTheater && (
+              <div className="flex flex-col gap-4">
+                {/* Date Selection */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-white text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+                    <span className="size-5 rounded-full bg-primary text-white text-xs flex items-center justify-center">
+                      3
+                    </span>
+                    Chọn ngày & suất chiếu
+                  </label>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {dateOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => handleDateChange(option.value)}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                          selectedDate === option.value
+                            ? "bg-primary text-white"
+                            : "bg-[#33191e] border border-[#67323b] text-[#c9929b] hover:border-primary"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Showtime Selection */}
+                {loadingShowtimes ? (
+                  <div className="h-16 rounded-lg bg-[#33191e] flex items-center justify-center">
+                    <span className="text-[#c9929b] text-sm">
+                      Đang tải suất chiếu...
+                    </span>
+                  </div>
+                ) : showtimes.length === 0 ? (
+                  <div className="h-16 rounded-lg bg-[#33191e] flex items-center justify-center">
+                    <span className="text-[#c9929b] text-sm">
+                      Không có suất chiếu
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {showtimes.map((showtime) => (
+                      <button
+                        key={showtime.id}
+                        onClick={() => handleShowtimeSelect(showtime)}
+                        className={`h-10 px-4 rounded-lg text-sm font-medium transition-all ${
+                          selectedShowtime?.id === showtime.id
+                            ? "bg-primary text-white font-bold shadow-lg shadow-primary/20"
+                            : "bg-[#33191e] border border-[#67323b] text-[#c9929b] hover:border-primary hover:text-white"
+                        }`}
+                      >
+                        {showtime.startTime.slice(0, 5)}
+                        <span className="text-xs ml-1 opacity-70">
+                          - {showtime.endTime.slice(0, 5)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Middle Column: Seat Map */}
-          <div className="lg:col-span-6 bg-[#221114] rounded-2xl p-6 border border-[#482329] flex flex-col items-center">
-            {/* Screen Visual */}
-            <div className="w-full flex flex-col items-center mb-12">
-              <div className="h-1.5 w-3/4 bg-gradient-to-r from-transparent via-white/50 to-transparent rounded-full shadow-[0_10px_30px_-5px_rgba(255,255,255,0.4)] mb-2"></div>
-              <p className="text-[#c9929b] text-xs uppercase tracking-[0.2em]">
-                Màn hình
-              </p>
-            </div>
-
-            {/* Seat Grid */}
-            <div className="w-full max-w-lg mx-auto">
-              {/* Standard Rows (A-E) */}
-              <div className="flex flex-col gap-3 mb-6">
-                {["A", "B", "C", "D", "E"].map((row) => (
-                  <div key={row} className="flex justify-center gap-2 md:gap-3">
-                    <span className="w-6 flex items-center justify-center text-[#c9929b] text-xs font-bold">
-                      {row}
-                    </span>
-                    {seatsByRow[row]?.slice(0, 3).map(renderSeat)}
-                    <span className="w-4"></span>
-                    {seatsByRow[row]?.slice(3, 7).map(renderSeat)}
-                    <span className="w-4"></span>
-                    {seatsByRow[row]?.slice(7, 10).map(renderSeat)}
-                  </div>
-                ))}
+          <div className="lg:col-span-6 bg-[#221114] rounded-2xl p-6 border border-[#482329] flex flex-col items-center min-h-[400px]">
+            {currentStep < 4 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center">
+                <span className="material-symbols-outlined text-6xl text-gray-600 mb-4">
+                  event_seat
+                </span>
+                <p className="text-[#c9929b] text-lg mb-2">
+                  Vui lòng hoàn thành các bước
+                </p>
+                <p className="text-gray-500 text-sm">
+                  {currentStep === 1 && "Chọn khu vực để tiếp tục"}
+                  {currentStep === 2 && "Chọn rạp chiếu phim"}
+                  {currentStep === 3 && "Chọn suất chiếu"}
+                </p>
               </div>
-
-              {/* VIP Rows (F-G) */}
-              <div className="flex flex-col gap-3 mb-8">
-                {["F", "G"].map((row) => (
-                  <div key={row} className="flex justify-center gap-2 md:gap-3">
-                    <span className="w-6 flex items-center justify-center text-[#c9929b] text-xs font-bold">
-                      {row}
-                    </span>
-                    {seatsByRow[row]?.slice(0, 3).map(renderSeat)}
-                    <span className="w-4"></span>
-                    {seatsByRow[row]?.slice(3, 7).map(renderSeat)}
-                    <span className="w-4"></span>
-                    {seatsByRow[row]?.slice(7, 10).map(renderSeat)}
-                  </div>
-                ))}
+            ) : loadingSeats ? (
+              <div className="flex-1 flex items-center justify-center">
+                <span className="text-[#c9929b]">Đang tải sơ đồ ghế...</span>
               </div>
-            </div>
-
-            {/* Legend */}
-            <div className="flex flex-wrap justify-center gap-6 md:gap-10 mt-auto pt-6 border-t border-[#482329] w-full">
-              <div className="flex items-center gap-3">
-                <div className="size-5 rounded bg-gray-700"></div>
-                <span className="text-sm text-[#c9929b]">Ghế thường</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="size-5 rounded border-2 border-[#d4af37] bg-[#3a3020]"></div>
-                <span className="text-sm text-[#c9929b]">Ghế VIP</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="size-5 rounded bg-primary shadow-[0_0_10px_rgba(236,19,55,0.4)]"></div>
-                <span className="text-sm text-[#c9929b]">Đang chọn</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="size-5 rounded bg-gray-800 opacity-50 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[12px] text-white">
-                    close
-                  </span>
+            ) : (
+              <>
+                {/* Screen Visual */}
+                <div className="w-full flex flex-col items-center mb-12">
+                  <div className="h-1.5 w-3/4 bg-gradient-to-r from-transparent via-white/50 to-transparent rounded-full shadow-[0_10px_30px_-5px_rgba(255,255,255,0.4)] mb-2"></div>
+                  <p className="text-[#c9929b] text-xs uppercase tracking-[0.2em]">
+                    Màn hình
+                  </p>
                 </div>
-                <span className="text-sm text-[#c9929b]">Đã bán</span>
-              </div>
-            </div>
+
+                {/* Seat Grid */}
+                <div className="w-full max-w-lg mx-auto">
+                  {rows.map((row) => (
+                    <div
+                      key={row}
+                      className="flex justify-center gap-2 md:gap-3 mb-3"
+                    >
+                      <span className="w-6 flex items-center justify-center text-[#c9929b] text-xs font-bold">
+                        {row}
+                      </span>
+                      {seatsByRow[row]
+                        .sort((a, b) => a.number - b.number)
+                        .map(renderSeat)}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-wrap justify-center gap-6 md:gap-10 mt-auto pt-6 border-t border-[#482329] w-full">
+                  <div className="flex items-center gap-3">
+                    <div className="size-5 rounded bg-gray-700"></div>
+                    <span className="text-sm text-[#c9929b]">Ghế thường</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="size-5 rounded border-2 border-[#d4af37] bg-[#3a3020]"></div>
+                    <span className="text-sm text-[#c9929b]">Ghế VIP</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="size-5 rounded bg-primary shadow-[0_0_10px_rgba(236,19,55,0.4)]"></div>
+                    <span className="text-sm text-[#c9929b]">Đang chọn</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="size-5 rounded bg-gray-800 opacity-50 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[12px] text-white">
+                        close
+                      </span>
+                    </div>
+                    <span className="text-sm text-[#c9929b]">Đã bán</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Right Column: Summary Sticky */}
+          {/* Right Column: Summary */}
           <div className="lg:col-span-3">
             <div className="sticky top-24 bg-[#221114] rounded-2xl border border-[#482329] overflow-hidden">
-              {/* Movie Header with gradient placeholder */}
+              {/* Movie Header */}
               <div className="relative h-48 w-full bg-gradient-to-tr from-gray-900 via-[#3a1c21] to-black">
                 <div className="absolute inset-0 flex items-center justify-center text-white/10">
                   <span className="material-symbols-outlined !text-8xl">
@@ -421,9 +639,11 @@ const Booking: React.FC = () => {
                 </div>
                 <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/90 to-transparent">
                   <h3 className="text-white text-lg font-bold truncate">
-                    {movieInfo.title}
+                    {filmInfo?.name || "Chưa chọn phim"}
                   </h3>
-                  <p className="text-sm text-[#c9929b]">{movieInfo.format}</p>
+                  <p className="text-sm text-[#c9929b]">
+                    {filmInfo?.language || "---"}
+                  </p>
                 </div>
               </div>
 
@@ -436,9 +656,13 @@ const Booking: React.FC = () => {
                     </span>
                     <div>
                       <p className="text-white text-sm font-bold">
-                        {selectedCinema?.name || "Chưa chọn rạp"}
+                        {selectedTheater?.name || "Chưa chọn rạp"}
                       </p>
-                      <p className="text-[#c9929b] text-xs">Rạp 5</p>
+                      <p className="text-[#c9929b] text-xs">
+                        {selectedShowtime?.auditorium
+                          ? `Phòng ${selectedShowtime.auditorium.number}`
+                          : "---"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
@@ -447,10 +671,23 @@ const Booking: React.FC = () => {
                     </span>
                     <div>
                       <p className="text-white text-sm font-bold">
-                        Thứ 6, 24/05/2024
+                        {selectedShowtime
+                          ? new Date(selectedShowtime.date).toLocaleDateString(
+                              "vi-VN",
+                              {
+                                weekday: "long",
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              }
+                            )
+                          : "Chưa chọn ngày"}
                       </p>
                       <p className="text-[#c9929b] text-xs">
-                        Suất: {selectedShowtime || "--:--"}
+                        Suất:{" "}
+                        {selectedShowtime
+                          ? selectedShowtime.startTime.slice(0, 5)
+                          : "--:--"}
                       </p>
                     </div>
                   </div>
@@ -460,19 +697,20 @@ const Booking: React.FC = () => {
                 <div className="flex justify-between items-start pb-4 border-b border-[#482329] border-dashed">
                   <div>
                     <p className="text-[#c9929b] text-xs mb-1">Ghế đã chọn:</p>
-                    <div className="flex gap-1 flex-wrap">
+                    <div className="flex gap-1 flex-wrap max-w-[120px]">
                       {selectedSeats.length > 0 ? (
                         selectedSeats.map((seat) => (
                           <span
                             key={seat.id}
                             className="text-white text-sm font-bold bg-gray-800 px-2 py-0.5 rounded border border-gray-700"
                           >
-                            {seat.id}
+                            {seat.seatRow}
+                            {seat.number}
                           </span>
                         ))
                       ) : (
                         <span className="text-[#c9929b] text-sm">
-                          Chưa chọn ghế
+                          Chưa chọn
                         </span>
                       )}
                     </div>
@@ -480,7 +718,9 @@ const Booking: React.FC = () => {
                   <div className="text-right">
                     <p className="text-[#c9929b] text-xs mb-1">Đơn giá:</p>
                     <p className="text-white text-sm">
-                      {vipPrice.toLocaleString()}đ/vé
+                      {filmInfo?.price
+                        ? `${filmInfo.price.toLocaleString()}đ/vé`
+                        : "---"}
                     </p>
                   </div>
                 </div>
@@ -493,7 +733,7 @@ const Booking: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Buttons */}
+                {/* Payment Button */}
                 <button
                   onClick={handlePayment}
                   disabled={selectedSeats.length === 0}
