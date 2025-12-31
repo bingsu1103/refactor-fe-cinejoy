@@ -13,6 +13,9 @@ declare global {
     username: string;
     email: string;
     avatar?: string;
+    gender?: string;
+    phone: string;
+    role?: string;
   }
 
   interface ILoginRes {
@@ -38,8 +41,24 @@ declare global {
     description: string;
     genre: string;
     language: string;
-    release_date: string | Date;
+    releaseDate: string | Date;
     rating: number;
+  }
+
+  interface ReqShowtime {
+    filmId: number;
+    theaterId: number;
+    date: string;
+    startTime: string;
+    endTime: string;
+    status: "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED";
+  }
+
+  interface ReqBooking {
+    showtimeId: number;
+    seatId: number;
+    userId: number;
+    status: "PENDING" | "CONFIRMED" | "CANCELLED";
   }
 
   // Booking related types

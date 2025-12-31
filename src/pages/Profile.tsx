@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../store/useAuth";
 import authApi from "../services/api-auth";
+import userApi from "../services/api-user";
+import uploadApi from "../services/api-upload";
 
 // Define the menu items for the sidebar
 type MenuItem = {
@@ -40,19 +42,28 @@ const menuItems: MenuItem[] = [
 ];
 
 const Profile: React.FC = () => {
-  const { user, authenticated, isLoading: authLoading, clearUser } = useAuth();
+  const {
+    user,
+    authenticated,
+    isLoading: authLoading,
+    clearUser,
+    setUser,
+  } = useAuth();
   const navigate = useNavigate();
   const [activeMenu, setActiveMenu] = useState("profile");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
   const [formData, setFormData] = useState({
-    fullName: "",
+    username: "",
     email: "",
     phone: "",
-    birthDate: "",
-    gender: "male",
-    city: "hcm",
+    gender: "MEN",
   });
+
+  // Avatar states
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
@@ -71,13 +82,14 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (user) {
       setFormData({
-        fullName: user.username || "",
+        username: user.username || "",
         email: user.email || "",
-        phone: "",
-        birthDate: "",
-        gender: "male",
-        city: "hcm",
+        phone: user.phone || "",
+        gender: user.gender || "MEN",
       });
+      // Reset avatar preview when user changes
+      setAvatarPreview(null);
+      setAvatarFile(null);
     }
   }, [user]);
 
@@ -88,14 +100,77 @@ const Profile: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Handle avatar file selection
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setMessage({ type: "error", text: "Vui lòng chọn file ảnh hợp lệ!" });
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setMessage({ type: "error", text: "Kích thước ảnh tối đa là 5MB!" });
+        return;
+      }
+
+      setAvatarFile(file);
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      setMessage(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage(null);
 
     try {
-      // TODO: Implement API call to update user profile
-      // await userApi.updateProfile(formData);
+      if (!user?.id) {
+        throw new Error("User ID not found");
+      }
+
+      // Prepare update payload
+      const updatePayload: any = {
+        username: formData.username,
+        phone: formData.phone,
+        gender: formData.gender,
+      };
+
+      // If there's a new avatar file, upload it first
+      if (avatarFile) {
+        const response = await uploadApi.uploadFile(avatarFile);
+        updatePayload.avatar = response.data.url;
+      }
+
+      // Call updateUser API
+      await userApi.updateUser(user.id, updatePayload);
+
+      // Update local user state
+      setUser({
+        ...user,
+        username: formData.username,
+        phone: formData.phone,
+        gender: formData.gender,
+        avatar: avatarPreview || user.avatar,
+      });
+
+      // Clear avatar file after successful save
+      setAvatarFile(null);
+
       setMessage({ type: "success", text: "Cập nhật thông tin thành công!" });
     } catch (error) {
       console.error("Update profile error:", error);
@@ -125,15 +200,23 @@ const Profile: React.FC = () => {
     // Reset form to original user data
     if (user) {
       setFormData({
-        fullName: user.username || "",
+        username: user.username || "",
         email: user.email || "",
-        phone: "",
-        birthDate: "",
-        gender: "male",
-        city: "hcm",
+        phone: user.phone || "",
+        gender: user.gender || "MEN",
       });
+      // Reset avatar preview
+      setAvatarPreview(null);
+      setAvatarFile(null);
     }
     setMessage(null);
+  };
+
+  // Get display avatar (preview or current)
+  const getDisplayAvatar = () => {
+    if (avatarPreview) return avatarPreview;
+    if (user?.avatar) return user.avatar;
+    return null;
   };
 
   // Show loading state while checking authentication
@@ -171,16 +254,30 @@ const Profile: React.FC = () => {
     return null; // Will redirect in useEffect
   }
 
+  const displayAvatar = getDisplayAvatar();
+
   return (
     <div className="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-8">
+      {/* Hidden file input for avatar */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleAvatarChange}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* Sidebar Navigation */}
       <aside className="w-full md:w-72 shrink-0 flex flex-col gap-6">
         {/* Mobile User Card */}
         <div className="bg-[#2f161a] rounded-xl p-6 border border-[#482329] flex items-center gap-4 md:hidden">
-          <div className="size-14 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-primary font-bold overflow-hidden">
-            {user.avatar ? (
+          <div
+            className="size-14 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center text-primary font-bold overflow-hidden cursor-pointer"
+            onClick={handleAvatarClick}
+          >
+            {displayAvatar ? (
               <img
-                src={user.avatar}
+                src={displayAvatar}
                 alt={user.username}
                 className="w-full h-full object-cover"
               />
@@ -236,7 +333,7 @@ const Profile: React.FC = () => {
         >
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent p-5 flex flex-col justify-end">
             <p className="text-white font-bold text-lg leading-tight">
-              Nâng cấp VIP
+              Ưu đãi đặc biệt
             </p>
             <p className="text-gray-300 text-xs mt-1">
               Nhận ưu đãi bỏng nước miễn phí!
@@ -262,10 +359,13 @@ const Profile: React.FC = () => {
           <div className="p-6 md:p-8 border-b border-[#482329] bg-gradient-to-r from-[#2f161a] to-[#3a2026]">
             <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
               <div className="relative group">
-                <div className="size-28 md:size-32 rounded-full bg-primary/20 border-4 border-[#2f161a] shadow-xl flex items-center justify-center text-primary font-bold overflow-hidden">
-                  {user.avatar ? (
+                <div
+                  className="size-28 md:size-32 rounded-full bg-primary/20 border-4 border-[#2f161a] shadow-xl flex items-center justify-center text-primary font-bold overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={handleAvatarClick}
+                >
+                  {displayAvatar ? (
                     <img
-                      src={user.avatar}
+                      src={displayAvatar}
                       alt={user.username}
                       className="w-full h-full object-cover"
                     />
@@ -276,13 +376,21 @@ const Profile: React.FC = () => {
                   )}
                 </div>
                 <button
-                  className="absolute bottom-1 right-1 bg-primary text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                  type="button"
+                  onClick={handleAvatarClick}
+                  className="absolute flex items-center justify-center bottom-1 right-1 bg-primary text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
                   title="Đổi ảnh đại diện"
                 >
                   <span className="material-symbols-outlined text-[20px] block">
                     photo_camera
                   </span>
                 </button>
+                {/* Preview indicator */}
+                {avatarPreview && (
+                  <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-[10px] px-2 py-0.5 rounded-full font-bold">
+                    Preview
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 text-center md:text-left pt-2">
@@ -291,27 +399,25 @@ const Profile: React.FC = () => {
                     {user.username}
                   </h2>
                   <span className="bg-primary/20 text-primary border border-primary/30 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider self-center md:self-auto">
-                    Thành viên VIP
+                    {user.role || "USER"}
                   </span>
                 </div>
                 <p className="text-[#c9929b] mb-1">{user.email}</p>
-                <p className="text-[#c9929b] text-sm">
-                  Thành viên từ tháng 8, 2023
-                </p>
+                {user.phone && (
+                  <p className="text-[#c9929b] text-sm">
+                    <span className="material-symbols-outlined text-[14px] align-middle mr-1">
+                      phone
+                    </span>
+                    {user.phone}
+                  </p>
+                )}
 
-                {/* Stats */}
+                {/* Stats - Tickets only */}
                 <div className="flex items-center gap-6 mt-6 justify-center md:justify-start">
                   <div>
-                    <p className="text-white font-bold text-lg">24</p>
+                    <p className="text-white font-bold text-lg">--</p>
                     <p className="text-xs text-[#c9929b] uppercase tracking-wider">
                       Vé đã mua
-                    </p>
-                  </div>
-                  <div className="w-px h-8 bg-[#482329]"></div>
-                  <div>
-                    <p className="text-white font-bold text-lg">1,200</p>
-                    <p className="text-xs text-[#c9929b] uppercase tracking-wider">
-                      Điểm thưởng
                     </p>
                   </div>
                 </div>
@@ -339,16 +445,16 @@ const Profile: React.FC = () => {
 
             <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Full Name */}
+                {/* Username */}
                 <label className="flex flex-col gap-2">
                   <span className="text-white text-sm font-medium">
-                    Họ và tên
+                    Tên người dùng
                   </span>
                   <div className="relative">
                     <input
-                      name="fullName"
+                      name="username"
                       type="text"
-                      value={formData.fullName}
+                      value={formData.username}
                       onChange={handleInputChange}
                       className="w-full bg-[#33191e] border border-[#67323b] text-white text-sm rounded-lg h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-[#c9929b]/50"
                     />
@@ -390,22 +496,6 @@ const Profile: React.FC = () => {
                   </div>
                 </label>
 
-                {/* Date of Birth */}
-                <label className="flex flex-col gap-2">
-                  <span className="text-white text-sm font-medium">
-                    Ngày sinh
-                  </span>
-                  <div className="relative">
-                    <input
-                      name="birthDate"
-                      type="date"
-                      value={formData.birthDate}
-                      onChange={handleInputChange}
-                      className="w-full bg-[#33191e] border border-[#67323b] text-white text-sm rounded-lg h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-[#c9929b]/50 [color-scheme:dark]"
-                    />
-                  </div>
-                </label>
-
                 {/* Gender */}
                 <label className="flex flex-col gap-2">
                   <span className="text-white text-sm font-medium">
@@ -423,32 +513,8 @@ const Profile: React.FC = () => {
                       backgroundSize: "1.5rem",
                     }}
                   >
-                    <option value="male">Nam</option>
-                    <option value="female">Nữ</option>
-                    <option value="other">Khác</option>
-                  </select>
-                </label>
-
-                {/* City */}
-                <label className="flex flex-col gap-2">
-                  <span className="text-white text-sm font-medium">
-                    Thành phố
-                  </span>
-                  <select
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    className="w-full bg-[#33191e] border border-[#67323b] text-white text-sm rounded-lg h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23c9929b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "right 1rem center",
-                      backgroundSize: "1.5rem",
-                    }}
-                  >
-                    <option value="hcm">TP. Hồ Chí Minh</option>
-                    <option value="hn">Hà Nội</option>
-                    <option value="dn">Đà Nẵng</option>
+                    <option value="MEN">Nam</option>
+                    <option value="WOMEN">Nữ</option>
                   </select>
                 </label>
               </div>

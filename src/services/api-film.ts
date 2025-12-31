@@ -66,6 +66,12 @@ const filmApi = {
     const response = await axios.delete(`${backendUrl}/api/v1/films/${id}`);
     return response;
   },
+
+  getFilmById: async (id: number) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.get(`${backendUrl}/api/v1/films/${id}`);
+    return response;
+  },
 };
 
 export default filmApi;
