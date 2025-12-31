@@ -12,7 +12,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { setUser, setAuthenticated } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +45,7 @@ const Login: React.FC = () => {
         // Update auth store
         if (response.data?.user) {
           setUser(response.data.user);
+          setAuthenticated(true);
         }
 
         // Navigate to home

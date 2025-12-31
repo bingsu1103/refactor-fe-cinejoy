@@ -12,6 +12,8 @@ import Register from "./pages/Register.tsx";
 import Payment from "./pages/Payment.tsx";
 import Booking from "./pages/Booking.tsx";
 import Profile from "./pages/Profile.tsx";
+import BookingHistory from "./pages/BookingHistory.tsx";
+import PasswordRecover from "./pages/PasswordRecover.tsx";
 import "./styles/global.css";
 import MovieDetail from "./pages/MovieDetail.tsx";
 
@@ -55,6 +57,14 @@ const router = createBrowserRouter([
       {
         path: "profile",
         element: <Profile />,
+      },
+      {
+        path: "booking-history",
+        element: <BookingHistory />,
+      },
+      {
+        path: "change-password",
+        element: <PasswordRecover />,
       },
       // {
       //   path: "/about",
