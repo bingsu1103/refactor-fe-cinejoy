@@ -46,5 +46,43 @@ const authApi = {
     );
     return response;
   },
+
+  forgotPassword: async (email: string): Promise<IBackendRes<void>> => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.post(
+      `${backendUrl}/api/v1/auth/forgot-password`,
+      {
+        email,
+      }
+    );
+    return response;
+  },
+
+  verifyOtp: async (
+    email: string,
+    otp: string
+  ): Promise<IBackendRes<IVerifyOtpRes>> => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.post(`${backendUrl}/api/v1/auth/verify-otp`, {
+      email,
+      otp,
+    });
+    return response;
+  },
+
+  resetPassword: async (
+    resetToken: string,
+    newPassword: string
+  ): Promise<IBackendRes<void>> => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.post(
+      `${backendUrl}/api/v1/auth/reset-password`,
+      {
+        resetToken,
+        newPassword,
+      }
+    );
+    return response;
+  },
 };
 export default authApi;

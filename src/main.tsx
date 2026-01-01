@@ -14,6 +14,8 @@ import Booking from "./pages/Booking.tsx";
 import Profile from "./pages/Profile.tsx";
 import BookingHistory from "./pages/BookingHistory.tsx";
 import PasswordRecover from "./pages/PasswordRecover.tsx";
+import VerifyOTP from "./pages/VerifyOTP.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import AdminLayout from "./components/admin/AdminLayout.tsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AuthProvider from "./components/context/AuthProvider.tsx";
@@ -26,6 +28,7 @@ import FilmManagement from "./pages/admin/FilmManagement.tsx";
 import AddressManagement from "./pages/admin/AddressManagement.tsx";
 import BookingManagement from "./pages/admin/BookingManagement.tsx";
 import AuditoriumManagement from "./pages/admin/AuditoriumManagement.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
 
 const router = createBrowserRouter([
   {
@@ -75,6 +78,18 @@ const router = createBrowserRouter([
       {
         path: "change-password",
         element: <PasswordRecover />,
+      },
+      {
+        path: "forgot-password",
+        element: <ForgotPassword />,
+      },
+      {
+        path: "verify-otp",
+        element: <VerifyOTP />,
+      },
+      {
+        path: "reset-password",
+        element: <ResetPassword />,
       },
     ],
   },

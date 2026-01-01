@@ -24,6 +24,10 @@ declare global {
     user: IFetchUserRes;
   }
 
+  interface IVerifyOtpRes {
+    resetToken: string;
+  }
+
   interface IRegisterRes {
     id: number;
     username: string;
