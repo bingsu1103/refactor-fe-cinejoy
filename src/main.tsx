@@ -13,7 +13,7 @@ import Payment from "./pages/Payment.tsx";
 import Booking from "./pages/Booking.tsx";
 import Profile from "./pages/Profile.tsx";
 import BookingHistory from "./pages/BookingHistory.tsx";
-import PasswordRecover from "./pages/PasswordRecover.tsx";
+import ChangePassword from "./pages/ChangePassword.tsx";
 import VerifyOTP from "./pages/VerifyOTP.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import AdminLayout from "./components/admin/AdminLayout.tsx";
@@ -30,10 +30,15 @@ import BookingManagement from "./pages/admin/BookingManagement.tsx";
 import AuditoriumManagement from "./pages/admin/AuditoriumManagement.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 
+import PaymentSuccess from "./pages/PaymentSuccess.tsx";
+import PaymentFailure from "./pages/PaymentFailure.tsx";
+import GeneralError from "./pages/GeneralError.tsx";
+
 const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <GeneralError />,
     children: [
       {
         index: true,
@@ -60,7 +65,7 @@ const router = createBrowserRouter([
         element: <MovieDetail />,
       },
       {
-        path: "booking",
+        path: "movie/:id/booking",
         element: <Booking />,
       },
       {
@@ -77,7 +82,7 @@ const router = createBrowserRouter([
       },
       {
         path: "change-password",
-        element: <PasswordRecover />,
+        element: <ChangePassword />,
       },
       {
         path: "forgot-password",
@@ -104,6 +109,14 @@ const router = createBrowserRouter([
   {
     path: "/payment",
     element: <Payment />,
+  },
+  {
+    path: "/payment-success",
+    element: <PaymentSuccess />,
+  },
+  {
+    path: "/payment-failure",
+    element: <PaymentFailure />,
   },
   {
     path: "/admin",

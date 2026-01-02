@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "../configs/axios.config";
-import addDays from "../utils/render-day-review";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -32,17 +31,20 @@ const showtimeApi = {
   },
 
   getListShowtimeByFilmAndDate: async (date: string, filmId: number) => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    const startDate = date;
-    const endDate = addDays(date, 2);
+    console.log(date);
 
-    const filter = `date>='${startDate}' and date<='${endDate}' and film.id=${filmId}`;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const filter = `date='${date}' and film.id=${filmId}`;
     const response = await axios.get(`${backendUrl}/api/v1/showtimes`, {
       params: {
         filter,
       },
     });
     return response;
+  },
+
+  getSeatAvailable: (showtimeId: number) => {
+    return axios.get(`${backendUrl}/api/v1/showtimes/${showtimeId}/seats`);
   },
 };
 

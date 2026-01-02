@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import seatApi from "../services/api-seat";
+import bookingApi from "../services/api-booking";
+import { message } from "antd";
 
 interface PaymentState {
   movie: IFilm;
   cinema: ITheater;
   showtime: IShowtime;
-  seats: ISeat[];
+  seats: IShowtimeSeat[];
   totalPrice: number;
   holdTime: number;
 }
@@ -19,6 +21,9 @@ const Payment: React.FC = () => {
   // Timer state - 5 minutes countdown
   const [timeRemaining, setTimeRemaining] = useState(state?.holdTime || 300);
   const [isReleasingSeats, setIsReleasingSeats] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<string>("CASH");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Redirect if no state
   useEffect(() => {
@@ -82,6 +87,40 @@ const Payment: React.FC = () => {
       confirm("Bạn có chắc muốn hủy đặt vé? Ghế đã chọn sẽ được giải phóng.")
     ) {
       await handleBack();
+    }
+  };
+
+  // Handle Payment
+  const handlePayment = async () => {
+    if (!state) return;
+
+    setIsProcessing(true);
+    try {
+      const response = await bookingApi.createBooking(selectedPaymentMethod);
+
+      if (selectedPaymentMethod === "CASH") {
+        message.success("Đặt vé thành công! Vui lòng thanh toán tại quầy.");
+        navigate("/payment-success", {
+          state: { ...state, paymentMethod: selectedPaymentMethod },
+        });
+      } else {
+        // For VNPAY and MOMO, redirect to payment URL
+        const paymentUrl =
+          response.data?.paymentUrl || response.data?.data?.paymentUrl;
+        if (paymentUrl) {
+          window.location.href = paymentUrl;
+        } else {
+          message.error("Không tìm thấy link thanh toán. Vui lòng thử lại.");
+        }
+      }
+    } catch (error: any) {
+      console.error("Payment error:", error);
+      message.error(
+        error.response?.data?.message ||
+          "Đã có lỗi xảy ra khi thực hiện thanh toán."
+      );
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -173,61 +212,44 @@ const Payment: React.FC = () => {
               </p>
             </div>
 
-            {/* Personal Info */}
+            {/* Payment Method */}
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <span className="flex items-center justify-center size-6 rounded-full bg-primary text-white text-xs font-bold">
                   1
                 </span>
-                Thông tin cá nhân
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium text-[#c9929b]">
-                    Họ và tên
-                  </span>
-                  <div className="relative">
-                    <input
-                      className="w-full h-12 rounded-lg border border-[#67323b] bg-[#33191e] px-4 pl-11 text-white placeholder-slate-400 focus:border-primary focus:ring-primary"
-                      placeholder="Nhập họ và tên"
-                      type="text"
-                    />
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#c9929b]">
-                      person
-                    </span>
-                  </div>
-                </label>
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium text-[#c9929b]">
-                    Email nhận vé
-                  </span>
-                  <div className="relative">
-                    <input
-                      className="w-full h-12 rounded-lg border border-[#67323b] bg-[#33191e] px-4 pl-11 text-white placeholder-slate-400 focus:border-primary focus:ring-primary"
-                      placeholder="Nhập email"
-                      type="email"
-                    />
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#c9929b]">
-                      mail
-                    </span>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            {/* Payment Method */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span className="flex items-center justify-center size-6 rounded-full bg-primary text-white text-xs font-bold">
-                  2
-                </span>
                 Phương thức thanh toán
               </h3>
               <div className="flex flex-col gap-3">
+                {/* CASH Option */}
+                <label className="group relative flex items-center gap-4 rounded-xl border border-[#67323b] bg-[#33191e] p-4 cursor-pointer hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/10">
+                  <input
+                    checked={selectedPaymentMethod === "CASH"}
+                    onChange={() => setSelectedPaymentMethod("CASH")}
+                    className="h-5 w-5 border-slate-600 text-primary focus:ring-primary bg-transparent"
+                    name="payment_method"
+                    type="radio"
+                  />
+                  <div className="flex items-center justify-center size-12 rounded-lg bg-white p-1 border border-slate-100">
+                    <span className="material-symbols-outlined text-3xl text-gray-700">
+                      payments
+                    </span>
+                  </div>
+                  <div className="flex grow flex-col">
+                    <p className="text-white font-bold leading-normal">
+                      Thanh toán tại quầy (Tiền mặt)
+                    </p>
+                    <p className="text-[#c9929b] text-sm font-normal leading-normal">
+                      Vui lòng thanh toán tại quầy trước khi suất chiếu bắt đầu
+                    </p>
+                  </div>
+                </label>
+
                 {/* VNPay Option */}
                 <label className="group relative flex items-center gap-4 rounded-xl border border-[#67323b] bg-[#33191e] p-4 cursor-pointer hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/10">
                   <input
-                    defaultChecked
+                    checked={selectedPaymentMethod === "VNPAY"}
+                    onChange={() => setSelectedPaymentMethod("VNPAY")}
                     className="h-5 w-5 border-slate-600 text-primary focus:ring-primary bg-transparent"
                     name="payment_method"
                     type="radio"
@@ -250,30 +272,6 @@ const Payment: React.FC = () => {
                     </div>
                     <p className="text-[#c9929b] text-sm font-normal leading-normal">
                       Quét mã qua ứng dụng ngân hàng hoặc ví VNPay
-                    </p>
-                  </div>
-                </label>
-
-                {/* ZaloPay Option */}
-                <label className="group relative flex items-center gap-4 rounded-xl border border-[#67323b] bg-[#33191e] p-4 cursor-pointer hover:border-primary/50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/10">
-                  <input
-                    className="h-5 w-5 border-slate-600 text-primary focus:ring-primary bg-transparent"
-                    name="payment_method"
-                    type="radio"
-                  />
-                  <div className="flex items-center justify-center size-12 rounded-lg bg-white p-1 border border-slate-100">
-                    <img
-                      alt="ZaloPay Logo"
-                      className="w-full h-auto object-contain"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnC0Nj8u3l64vPn0mJbNgiiIjbjPLqC34anIds1j2S61H4zYIljMQPVjAbmNF4hFwV-8rwzrCar99TxaAaECHiTKhfbBlPooZSaqmYKTyQbxi_5gUjLJXCppw0lhtrl8EBEs1WA-o2rfDr5CrLo4kewFRG_qE1mNSTyqw03RYdURJ3L5JzQikXeyMF8_yWuBYkrm1FBaVLo6R6z3sOJAnZcSh7ez3bh3cgKhp4P4ubX14jUYkfY_U75kNOJ5K--dwi_iN69Cp7gIk"
-                    />
-                  </div>
-                  <div className="flex grow flex-col">
-                    <p className="text-white font-bold leading-normal">
-                      Ví điện tử ZaloPay
-                    </p>
-                    <p className="text-[#c9929b] text-sm font-normal leading-normal">
-                      Thanh toán nhanh chóng qua ví ZaloPay
                     </p>
                   </div>
                 </label>
@@ -359,7 +357,7 @@ const Payment: React.FC = () => {
                     <div className="flex gap-1 flex-wrap">
                       {seats?.map((seat) => (
                         <span
-                          key={seat.id}
+                          key={seat.seatId}
                           className="text-white text-sm font-bold bg-gray-800 px-2 py-0.5 rounded border border-gray-700"
                         >
                           {seat.seatRow}
@@ -378,9 +376,13 @@ const Payment: React.FC = () => {
 
                 {/* Price Breakdown */}
                 <div className="flex justify-between items-center pb-4 border-b border-slate-800">
-                  <span className="text-[#c9929b] text-sm">Đơn giá</span>
+                  <span className="text-[#c9929b] text-sm">
+                    Đơn giá (Phim + Ghế)
+                  </span>
                   <span className="text-white font-medium">
-                    {movie?.price?.toLocaleString() || 0}đ
+                    {movie?.price && seats?.[0]
+                      ? `${(movie.price + (seats[0].totalPrice || 0)).toLocaleString()}đ`
+                      : `${movie?.price?.toLocaleString() || 0}đ`}
                   </span>
                 </div>
 
@@ -397,8 +399,14 @@ const Payment: React.FC = () => {
 
               {/* Actions */}
               <div className="p-6 pt-0 flex flex-col gap-3">
-                <button className="flex w-full items-center justify-center rounded-lg bg-primary py-4 text-white font-bold text-base hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
-                  Thanh toán {totalPrice?.toLocaleString() || 0}đ
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessing}
+                  className="flex w-full items-center justify-center rounded-lg bg-primary py-4 text-white font-bold text-base hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing
+                    ? "Đang xử lý..."
+                    : `Thanh toán ${totalPrice?.toLocaleString() || 0}đ`}
                 </button>
                 <button
                   onClick={handleCancel}

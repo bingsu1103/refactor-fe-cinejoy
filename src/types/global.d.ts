@@ -108,6 +108,7 @@ declare global {
     language: string;
     releaseDate: string;
     rating: number;
+    thumbnail?: string;
     createdAt?: string;
     updatedAt?: string | null;
     createdBy?: string;
@@ -132,8 +133,32 @@ declare global {
     id: number;
     seatRow: string;
     number: number;
-    status: "AVAILABLE" | "SOLD" | "RESERVED" | "HOLD";
+    status: "AVAILABLE" | "BOOKED" | "HOLD";
     seatVariantName: "REG" | "VIP";
+  }
+
+  interface IShowtimeSeat {
+    seatId: number;
+    seatRow: string;
+    number: number;
+    status: "AVAILABLE" | "BOOKED" | "HOLD";
+    seatVariantId: number;
+    seatVariantName: "REG" | "VIP";
+    basePrice: number;
+    bonus: number;
+    totalPrice: number;
+  }
+
+  interface IBooking {
+    id: number;
+    showtime: IShowtime;
+    seats: IShowtimeSeat[];
+    totalPrice?: number;
+    total_price?: number;
+    paymentMethod: string;
+    status: string;
+    qrCode?: string;
+    createdAt: string;
   }
 
   interface IPaginatedResponse<T> {

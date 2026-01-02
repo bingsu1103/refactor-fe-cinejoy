@@ -72,6 +72,23 @@ const filmApi = {
     const response = await axios.get(`${backendUrl}/api/v1/films/${id}`);
     return response;
   },
+
+  getFilmByStatus: async (status: string, page: number, size?: number) => {
+    const filters = `status='${status}'`;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const params: any = {
+      page,
+      sort: "releaseDate,desc",
+      filters,
+    };
+    if (size !== undefined) {
+      params.size = size;
+    }
+    const response = await axios.get(`${backendUrl}/api/v1/films`, {
+      params: params,
+    });
+    return response;
+  },
 };
 
 export default filmApi;

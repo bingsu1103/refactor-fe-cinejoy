@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import filmApi from "../services/api-film";
 
 interface Film {
   id: number;
   name: string;
+  director: string;
+  actors: string;
   duration: number;
   price: number;
   description: string;
@@ -26,7 +28,7 @@ const MovieDetail: React.FC = () => {
       try {
         setLoading(true);
         const res = await filmApi.getFilmById(Number(id));
-        setFilm(res.data);
+        setFilm(res.data.data || res.data);
       } catch (error) {
         console.error("Error fetching film:", error);
       } finally {
@@ -43,14 +45,6 @@ const MovieDetail: React.FC = () => {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
-  // Helper function to format price
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price);
-  };
-
   // Helper function to format date
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -59,8 +53,13 @@ const MovieDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen">
-        <div className="text-white text-xl">Đang tải...</div>
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-gray-400 font-medium animate-pulse">
+            Đang tải thông tin phim...
+          </p>
+        </div>
       </div>
     );
   }
@@ -173,31 +172,23 @@ const MovieDetail: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Price & Actions */}
+                {/* Actions */}
                 <div className="flex flex-col md:flex-row items-center gap-8 mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="relative px-6 py-3 flex items-center justify-center rounded-xl bg-surface-dark border-2 border-primary">
-                      <span className="text-xl font-bold text-primary">
-                        {formatPrice(film.price)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-4">
-                    <button className="flex items-center gap-2 px-6 h-12 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-all border border-white/20 backdrop-blur-md">
-                      <span className="material-symbols-outlined">
-                        play_circle
-                      </span>
-                      Trailer
-                    </button>
-                    <button className="flex items-center gap-2 px-8 h-12 rounded-lg bg-primary hover:bg-red-600 text-white font-bold shadow-lg shadow-primary/30 transition-all transform hover:-translate-y-0.5">
-                      <span className="material-symbols-outlined">
-                        confirmation_number
-                      </span>
-                      Đặt vé ngay
-                    </button>
-                  </div>
+                  <button className="flex items-center gap-2 px-6 h-12 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold transition-all border border-white/20 backdrop-blur-md">
+                    <span className="material-symbols-outlined">
+                      play_circle
+                    </span>
+                    Trailer
+                  </button>
+                  <Link
+                    to={`booking`}
+                    className="flex items-center gap-2 px-8 h-12 rounded-lg bg-primary hover:bg-red-600 text-white font-bold shadow-lg shadow-primary/30 transition-all transform hover:-translate-y-0.5"
+                  >
+                    <span className="material-symbols-outlined">
+                      confirmation_number
+                    </span>
+                    Đặt vé ngay
+                  </Link>
                 </div>
 
                 {/* Short Description for Hero */}
@@ -277,10 +268,13 @@ const MovieDetail: React.FC = () => {
                     {film.language}
                   </span>
 
-                  <span className="text-gray-400 font-medium">Giá vé</span>
-                  <span className="text-primary font-bold">
-                    {formatPrice(film.price)}
+                  <span className="text-gray-400 font-medium">Đạo diễn</span>
+                  <span className="text-white font-medium">
+                    {film.director}
                   </span>
+
+                  <span className="text-gray-400 font-medium">Diễn viên</span>
+                  <span className="text-white font-medium">{film.actors}</span>
 
                   {film.status && (
                     <>
@@ -293,79 +287,6 @@ const MovieDetail: React.FC = () => {
                     </>
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Booking Section */}
-          <div
-            className="mt-16 w-full bg-[#1a0e10] border border-white/5 rounded-2xl overflow-hidden"
-            id="booking"
-          >
-            {/* Header with Tabs */}
-            <div className="p-6 md:p-8 bg-[#2f161a] border-b border-white/5">
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary">
-                  calendar_month
-                </span>
-                Lịch chiếu
-              </h2>
-
-              {/* Date Selector Scroll */}
-              <div className="flex items-center gap-4 overflow-x-auto hide-scrollbar pb-2">
-                {/* Active Date */}
-                <button className="flex flex-col items-center justify-center min-w-[80px] h-[80px] rounded-xl bg-primary text-white shadow-lg shadow-primary/20 shrink-0 transition-transform hover:scale-105">
-                  <span className="text-xs font-medium uppercase tracking-wider">
-                    Hôm nay
-                  </span>
-                  <span className="text-2xl font-bold">01</span>
-                  <span className="text-xs opacity-80">T4</span>
-                </button>
-
-                {/* Inactive Dates */}
-                <button className="flex flex-col items-center justify-center min-w-[80px] h-[80px] rounded-xl bg-[#482329] text-gray-400 hover:text-white hover:bg-[#5a2c33] shrink-0 transition-colors">
-                  <span className="text-xs font-medium uppercase tracking-wider">
-                    Tháng 1
-                  </span>
-                  <span className="text-2xl font-bold">02</span>
-                  <span className="text-xs opacity-80">T5</span>
-                </button>
-                <button className="flex flex-col items-center justify-center min-w-[80px] h-[80px] rounded-xl bg-[#482329] text-gray-400 hover:text-white hover:bg-[#5a2c33] shrink-0 transition-colors">
-                  <span className="text-xs font-medium uppercase tracking-wider">
-                    Tháng 1
-                  </span>
-                  <span className="text-2xl font-bold">03</span>
-                  <span className="text-xs opacity-80">T6</span>
-                </button>
-                <button className="flex flex-col items-center justify-center min-w-[80px] h-[80px] rounded-xl bg-[#482329] text-gray-400 hover:text-white hover:bg-[#5a2c33] shrink-0 transition-colors">
-                  <span className="text-xs font-medium uppercase tracking-wider">
-                    Tháng 1
-                  </span>
-                  <span className="text-2xl font-bold">04</span>
-                  <span className="text-xs opacity-80">T7</span>
-                </button>
-                <button className="flex flex-col items-center justify-center min-w-[80px] h-[80px] rounded-xl bg-[#482329] text-gray-400 hover:text-white hover:bg-[#5a2c33] shrink-0 transition-colors">
-                  <span className="text-xs font-medium uppercase tracking-wider">
-                    Tháng 1
-                  </span>
-                  <span className="text-2xl font-bold">05</span>
-                  <span className="text-xs opacity-80">CN</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Cinema List - Placeholder */}
-            <div className="flex flex-col divide-y divide-white/5">
-              <div className="flex flex-col items-center justify-center p-12 text-center">
-                <span className="material-symbols-outlined text-gray-500 text-[48px] mb-4">
-                  event_busy
-                </span>
-                <p className="text-gray-400 text-lg">
-                  Chưa có lịch chiếu cho phim này
-                </p>
-                <p className="text-gray-500 text-sm mt-2">
-                  Vui lòng quay lại sau hoặc chọn ngày khác
-                </p>
               </div>
             </div>
           </div>

@@ -44,10 +44,9 @@ const AdminLayout: React.FC = () => {
     if (!isLoading && (!authenticated || !user)) {
       navigate("/login");
     }
-    // TODO: Add role check for admin access
-    // if (!isLoading && authenticated && user?.role !== 'admin') {
-    //   navigate('/');
-    // }
+    if (!isLoading && authenticated && user && user.role !== "ADMIN") {
+      navigate("/");
+    }
   }, [isLoading, authenticated, user, navigate]);
 
   // Show loading state while checking authentication

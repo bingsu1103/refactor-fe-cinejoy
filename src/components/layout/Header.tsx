@@ -310,7 +310,7 @@ const Header: React.FC = () => {
                     Tài khoản
                   </Link>
                   <Link
-                    to="/my-tickets"
+                    to="/booking-history"
                     onClick={() => setShowDropdown(false)}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#482329] transition-colors"
                   >
@@ -319,6 +319,18 @@ const Header: React.FC = () => {
                     </span>
                     Vé của tôi
                   </Link>
+                  {user.role === "ADMIN" && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-primary font-bold hover:bg-gray-100 dark:hover:bg-[#482329] transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        admin_panel_settings
+                      </span>
+                      Quản trị viên
+                    </Link>
+                  )}
                   <hr className="my-2 border-gray-200 dark:border-[#482329]" />
                   <button
                     onClick={handleLogout}

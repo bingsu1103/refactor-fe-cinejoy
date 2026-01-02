@@ -1,6 +1,47 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
+import filmApi from "../services/api-film";
 
 const Home: React.FC = () => {
+  const [nowShowingMovies, setNowShowingMovies] = useState<any[]>([]);
+  const [comingSoonMovies, setComingSoonMovies] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"NOW_SHOWING" | "COMING_SOON">(
+    "NOW_SHOWING"
+  );
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMovies = async () => {
+      setLoading(true);
+      try {
+        const [nowShowingRes, comingSoonRes] = await Promise.all([
+          filmApi.getFilmByStatus("NOW_SHOWING", 1, 10),
+          filmApi.getFilmByStatus("COMING_SOON", 1, 10),
+        ]);
+
+        const nowShowingData =
+          nowShowingRes.data?.data?.data || nowShowingRes.data?.data || [];
+        const comingSoonData =
+          comingSoonRes.data?.data?.data || comingSoonRes.data?.data || [];
+
+        setNowShowingMovies(
+          Array.isArray(nowShowingData) ? nowShowingData.slice(0, 10) : []
+        );
+        setComingSoonMovies(
+          Array.isArray(comingSoonData) ? comingSoonData.slice(0, 10) : []
+        );
+      } catch (error) {
+        console.error("Error fetching homepage movies:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovies();
+  }, []);
+
+  const featuredMovie = nowShowingMovies[0] || null;
+
   return (
     <main className="flex-grow">
       {/* Hero Section */}
@@ -9,7 +50,7 @@ const Home: React.FC = () => {
         <div
           className="absolute inset-0 w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
           style={{
-            backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuB5dvgl_5TIycwn2te9WR7LSb7doNIeeEhUzaaK6lOZKTVj1E_8kKbqENuqQks0uBsOPP7lfBog2fPvaWaG2qyXroe-oNeJG_UVnvJULycxiTKDCroNEiVaYwhnWOzyyUvM0zMwYVJu890u9i9KTna4PzOLZxA-54Jojl-s8hvpRLE34kcLTBdhZOVH5f144UUrkQ3sm7n5R97InsArhguzXi-hKl3ehP_R_KHEHXqFRiiTyVvbmww0sKpu3pYqyh-D9hkZKWdjVEg')`,
+            backgroundImage: `url('${featuredMovie?.thumbnail || "https://lh3.googleusercontent.com/aida-public/AB6AXuB5dvgl_5TIycwn2te9WR7LSb7doNIeeEhUzaaK6lOZKTVj1E_8kKbqENuqQks0uBsOPP7lfBog2fPvaWaG2qyXroe-oNeJG_UVnvJULycxiTKDCroNEiVaYwhnWOzyyUvM0zMwYVJu890u9i9KTna4PzOLZxA-54Jojl-s8hvpRLE34kcLTBdhZOVH5f144UUrkQ3sm7n5R97InsArhguzXi-hKl3ehP_R_KHEHXqFRiiTyVvbmww0sKpu3pYqyh-D9hkZKWdjVEg"}')`,
           }}
         ></div>
         {/* Gradient Overlay */}
@@ -24,28 +65,23 @@ const Home: React.FC = () => {
                 P (13+)
               </span>
               <span className="px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded border border-white/30">
-                Hành động
-              </span>
-              <span className="px-2 py-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded border border-white/30">
-                Viễn tưởng
+                {featuredMovie?.genre?.split(",")[0] || "Hành động"}
               </span>
               <span className="flex items-center gap-1 text-yellow-400 text-sm font-bold">
                 <span className="material-symbols-outlined text-sm">star</span>{" "}
-                9.2
+                {featuredMovie?.rating || "9.0"}
               </span>
             </div>
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight mb-4 tracking-tight drop-shadow-lg">
-              Godzilla x Kong: <br />
-              <span className="text-primary">Đế Chế Mới</span>
+            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black text-white leading-tight mb-4 tracking-tight drop-shadow-lg uppercase">
+              {featuredMovie?.name || "CineMovie"}
             </h2>
             <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-8 line-clamp-3 md:line-clamp-2 max-w-xl">
-              Hai titan cổ đại Godzilla và Kong đụng độ trong một trận chiến
-              hoành tráng khi con người làm sáng tỏ nguồn gốc của chúng và mối
-              liên hệ với những bí ẩn của Đảo Đầu Lâu.
+              {featuredMovie?.description ||
+                "Trải nghiệm điện ảnh đỉnh cao với những bộ phim mới nhất tại hệ thống rạp CineMovie."}
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
-                to="/booking"
+                to={featuredMovie ? `/movie/${featuredMovie.id}` : "/movie"}
                 className="flex items-center justify-center gap-2 h-12 px-8 bg-primary hover:bg-red-700 text-white font-bold rounded-lg shadow-lg shadow-primary/30 transition-all transform hover:-translate-y-1"
               >
                 <span className="material-symbols-outlined">
@@ -53,10 +89,6 @@ const Home: React.FC = () => {
                 </span>
                 Đặt vé ngay
               </Link>
-              <button className="flex items-center justify-center gap-2 h-12 px-6 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold rounded-lg transition-all">
-                <span className="material-symbols-outlined">play_circle</span>
-                Xem Trailer
-              </button>
             </div>
           </div>
         </div>
@@ -68,10 +100,24 @@ const Home: React.FC = () => {
         <section>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4 border-b border-gray-800 pb-2">
             <div className="flex gap-8">
-              <button className="relative pb-4 text-xl sm:text-2xl font-bold text-white after:absolute after:bottom-0 after:left-0 after:w-full after:h-1 after:bg-primary after:rounded-t-full transition-colors">
+              <button
+                onClick={() => setActiveTab("NOW_SHOWING")}
+                className={`relative pb-4 text-xl sm:text-2xl font-bold transition-all ${
+                  activeTab === "NOW_SHOWING"
+                    ? "text-white after:absolute after:bottom-0 after:left-0 after:w-full after:h-1 after:bg-primary after:rounded-t-full"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
                 Phim đang chiếu
               </button>
-              <button className="relative pb-4 text-xl sm:text-2xl font-bold text-gray-400 hover:text-gray-200 transition-colors">
+              <button
+                onClick={() => setActiveTab("COMING_SOON")}
+                className={`relative pb-4 text-xl sm:text-2xl font-bold transition-all ${
+                  activeTab === "COMING_SOON"
+                    ? "text-white after:absolute after:bottom-0 after:left-0 after:w-full after:h-1 after:bg-primary after:rounded-t-full"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
                 Phim sắp chiếu
               </button>
             </div>
@@ -87,184 +133,82 @@ const Home: React.FC = () => {
           </div>
 
           {/* Movies Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8">
-            {/* Movie Card 1 */}
-            <Link
-              to="/movie/1"
-              className="group flex flex-col gap-3 cursor-pointer"
-            >
-              <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg bg-gray-800">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                  style={{
-                    backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuBy8BkO1fU8oYLabC85AHygcH50qUX4-8JETDFicZaGMdZpcujAEBWzoYMCAiMZuqR2Tkulu_qyLdZ-cts2SBDjygHLv4RryCOpu8QVE5HwpHsLsMvvOf0noaoqTcieiYXHL_3qYE173VKk9IqmEIRA8JfMlDk2pPXMKFQnVxrzAECpvz38nx6YML7UQeaBCKmDSM1dFXEPacBbELI5c-88TITIflleVw2ZPtzkYnF5S1suW76FCKQvmXadIOsxr2A9L63VJBjPKPg')`,
-                  }}
-                ></div>
-                <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-white text-xs font-bold border border-white/10 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[10px] text-yellow-400">
-                    star
-                  </span>{" "}
-                  8.9
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8 animate-pulse">
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="flex flex-col gap-3">
+                  <div className="w-full aspect-[2/3] rounded-xl bg-gray-800"></div>
+                  <div className="h-4 bg-gray-800 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-800 rounded w-1/2"></div>
                 </div>
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4">
-                  <button className="w-full py-2 bg-primary text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-colors mb-2 text-sm">
-                    Mua vé
-                  </button>
-                  <button className="w-full py-2 bg-white/20 backdrop-blur text-white font-bold rounded-lg border border-white/30 hover:bg-white/30 transition-colors text-sm">
-                    Chi tiết
-                  </button>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8">
+              {(activeTab === "NOW_SHOWING"
+                ? nowShowingMovies
+                : comingSoonMovies
+              ).map((movie) => (
+                <div key={movie.id} className="group flex flex-col gap-3">
+                  <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg bg-gray-800">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                      style={{
+                        backgroundImage: `url('${movie.thumbnail}')`,
+                      }}
+                    ></div>
+                    {movie.rating && (
+                      <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-white text-xs font-bold border border-white/10 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[10px] text-yellow-400">
+                          star
+                        </span>{" "}
+                        {movie.rating}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 gap-2">
+                      <Link
+                        to={`/movie/${movie.id}/booking`}
+                        className="w-full py-2 bg-primary text-white text-center font-bold rounded-lg shadow-lg hover:bg-red-700 transition-colors text-sm"
+                      >
+                        Mua vé
+                      </Link>
+                      <Link
+                        to={`/movie/${movie.id}`}
+                        className="w-full py-2 bg-white/20 backdrop-blur text-white text-center font-bold rounded-lg border border-white/30 hover:bg-white/30 transition-colors text-sm"
+                      >
+                        Chi tiết
+                      </Link>
+                    </div>
+                  </div>
+                  <div>
+                    <Link
+                      to={`/movie/${movie.id}`}
+                      className="text-base font-bold text-white line-clamp-1 hover:text-primary transition-colors block"
+                    >
+                      {movie.name}
+                    </Link>
+                    <p className="text-sm text-gray-400 mt-0.5">
+                      {activeTab === "NOW_SHOWING"
+                        ? movie.genre?.split(",")[0] || "Phim"
+                        : movie.releaseDate
+                          ? new Date(movie.releaseDate).toLocaleDateString(
+                              "vi-VN"
+                            )
+                          : "Sắp ra mắt"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white line-clamp-1 group-hover:text-primary transition-colors">
-                  Dune: Hành Tinh Cát 2
-                </h3>
-                <p className="text-sm text-gray-400 mt-0.5">
-                  Khoa học viễn tưởng
-                </p>
-              </div>
-            </Link>
-
-            {/* Movie Card 2 */}
-            <Link
-              to="/movie/2"
-              className="group flex flex-col gap-3 cursor-pointer"
-            >
-              <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg bg-gray-800">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                  style={{
-                    backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuAXEcMbxEpf-3O37t7DAOsRwYBKK3XrwLISm48qN8ZVJOVqpiFA8HrKlGAMQXKsyRFgZYoIMACF1KopdH-ShYpE_vv9ytl572B57eYPtj57_4rK8UQTpdZ0J2j3Z5m69BbAgH_XoAvOKLIAyamQPfOwY6cOAgBydtgbU8mUjNAejjYHCHDVVeEMD98wNeoY58GjaVWymFE7Bw_jly7aa5VVbyz4InzPqyTdOboh5HGg8HWnflOKerXnY4tKncmsmuAcOE8gmxtyV6Y')`,
-                  }}
-                ></div>
-                <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-white text-xs font-bold border border-white/10 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[10px] text-yellow-400">
-                    star
-                  </span>{" "}
-                  7.5
+              ))}
+              {(activeTab === "NOW_SHOWING"
+                ? nowShowingMovies
+                : comingSoonMovies
+              ).length === 0 && (
+                <div className="col-span-full py-20 text-center text-gray-500 italic border border-dashed border-gray-800 rounded-2xl">
+                  Hiện tại không có bộ phim nào trong danh mục này.
                 </div>
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4">
-                  <button className="w-full py-2 bg-primary text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-colors mb-2 text-sm">
-                    Mua vé
-                  </button>
-                  <button className="w-full py-2 bg-white/20 backdrop-blur text-white font-bold rounded-lg border border-white/30 hover:bg-white/30 transition-colors text-sm">
-                    Chi tiết
-                  </button>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white line-clamp-1 group-hover:text-primary transition-colors">
-                  Kung Fu Panda 4
-                </h3>
-                <p className="text-sm text-gray-400 mt-0.5">Hoạt hình, Hài</p>
-              </div>
-            </Link>
-
-            {/* Movie Card 3 */}
-            <Link
-              to="/movie/3"
-              className="group flex flex-col gap-3 cursor-pointer"
-            >
-              <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg bg-gray-800">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                  style={{
-                    backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuBtY_rIZI8KaW1YVuL5VMWq44KkDdNodUHm3V1UEJNxZgT2RAs7QINj5_BdbJ_1Ra4Cj4jByCLUUdSCccIWl1VZgXv5NJDxQpFZYVTI4J30D5EJuQo2J3iZkL4UcNBQosUB3LmSbiFoPxYYI6npOTuHvB9457Tuzx6gpK1j4Z4MWBdpgtOcNYnOarM7CZC8m1_SNnHzOp4OH3kx8HXvIO31fptf3AbfB8ygMhKyxElkXllLnsa51Z2wwS0t9zUPuUy7Jw9_XXGPc2U')`,
-                  }}
-                ></div>
-                <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-white text-xs font-bold border border-white/10 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[10px] text-yellow-400">
-                    star
-                  </span>{" "}
-                  8.2
-                </div>
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4">
-                  <button className="w-full py-2 bg-primary text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-colors mb-2 text-sm">
-                    Mua vé
-                  </button>
-                  <button className="w-full py-2 bg-white/20 backdrop-blur text-white font-bold rounded-lg border border-white/30 hover:bg-white/30 transition-colors text-sm">
-                    Chi tiết
-                  </button>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white line-clamp-1 group-hover:text-primary transition-colors">
-                  Mai
-                </h3>
-                <p className="text-sm text-gray-400 mt-0.5">Tâm lý, Tình cảm</p>
-              </div>
-            </Link>
-
-            {/* Movie Card 4 */}
-            <Link
-              to="/movie/4"
-              className="group flex flex-col gap-3 cursor-pointer"
-            >
-              <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg bg-gray-800">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                  style={{
-                    backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuCsq1w4eOxu2wV625xQv5-N4edREAWFT0rYg6vOkMtYiVeIU-nV3S62omaDmjeAqXN3y8ONbUWP_U3-3jT68g-8aIQyJ9a_TInVOq8RNdm9Kdy3coxJWGd5Rw7BMUQy1Q60kvP99JloplY_NGsvoveN176bfI0KDiRWtqalLa1JymSLgDoNKuubYL1QTaze3XA7w-3cGlaBXD1Amvn-oEvSKfTP3DGcAADyCGzVh3R2mQ8lmeJYrBPBYOuhY31wNxMyNiakwhOgFTM')`,
-                  }}
-                ></div>
-                <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-white text-xs font-bold border border-white/10 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[10px] text-yellow-400">
-                    star
-                  </span>{" "}
-                  7.8
-                </div>
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4">
-                  <button className="w-full py-2 bg-primary text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-colors mb-2 text-sm">
-                    Mua vé
-                  </button>
-                  <button className="w-full py-2 bg-white/20 backdrop-blur text-white font-bold rounded-lg border border-white/30 hover:bg-white/30 transition-colors text-sm">
-                    Chi tiết
-                  </button>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white line-clamp-1 group-hover:text-primary transition-colors">
-                  Exhuma: Quật Mộ Trùng Ma
-                </h3>
-                <p className="text-sm text-gray-400 mt-0.5">Kinh dị, Bí ẩn</p>
-              </div>
-            </Link>
-
-            {/* Movie Card 5 */}
-            <Link
-              to="/movie/5"
-              className="group flex flex-col gap-3 cursor-pointer"
-            >
-              <div className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg bg-gray-800">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                  style={{
-                    backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuCsY8zslSIy67Ox7svtGrUTwZQ8PjIkpJnh2MpZmYDC5TwXnob8XTc6z9xKILfp04V181OVX_H-HNqn508eyKXjB9NXS7iDjZwOWFsO50WRIqtJe1x93g5GBI_nH0wXU21UhAgSniWB3gQ8b3XXZZ0HW6fx9Ede8wx9RMfzxc14Lw4Kwf3pDitb3J2A8uwRT3d2I0cefETMmeUXBfwnllEtjzr_kL0J2gi8RobQzAqXL_06d4Tk69UCKNJGBebKXMLDiNa3JEM1wTQ')`,
-                  }}
-                ></div>
-                <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-white text-xs font-bold border border-white/10 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[10px] text-yellow-400">
-                    star
-                  </span>{" "}
-                  6.9
-                </div>
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4">
-                  <button className="w-full py-2 bg-primary text-white font-bold rounded-lg shadow-lg hover:bg-red-700 transition-colors mb-2 text-sm">
-                    Mua vé
-                  </button>
-                  <button className="w-full py-2 bg-white/20 backdrop-blur text-white font-bold rounded-lg border border-white/30 hover:bg-white/30 transition-colors text-sm">
-                    Chi tiết
-                  </button>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white line-clamp-1 group-hover:text-primary transition-colors">
-                  Ghostbusters: Frozen Empire
-                </h3>
-                <p className="text-sm text-gray-400 mt-0.5">Hài, Hành động</p>
-              </div>
-            </Link>
-          </div>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Promotions Section */}
@@ -431,32 +375,6 @@ const Home: React.FC = () => {
                 </div>
               </Link>
             </div>
-          </div>
-
-          {/* Quick Map/Location */}
-          <div className="lg:col-span-1 bg-[#262626] rounded-xl p-6 border border-gray-800 h-fit">
-            <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">
-                location_on
-              </span>{" "}
-              Tìm rạp gần bạn
-            </h3>
-            <div className="w-full h-40 bg-gray-700 rounded-lg mb-4 overflow-hidden relative group cursor-pointer">
-              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-                300×300
-              </div>
-            </div>
-            <select className="w-full bg-background-dark border-none rounded-lg text-sm text-white p-3 mb-3 focus:ring-1 focus:ring-primary">
-              <option>TP. Hồ Chí Minh</option>
-              <option>Hà Nội</option>
-              <option>Đà Nẵng</option>
-            </select>
-            <Link
-              to="/theater"
-              className="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-lg transition-colors text-sm flex items-center justify-center"
-            >
-              Tìm rạp
-            </Link>
           </div>
         </section>
       </div>

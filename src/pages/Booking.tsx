@@ -2,16 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import addressApi from "../services/api-address";
 import showtimeApi from "../services/api-showtime";
-import auditoriumApi from "../services/api-auditorium";
 import seatApi from "../services/api-seat";
+import filmApi from "../services/api-film";
 
 // Extended seat type for UI state
-interface SeatWithSelection extends ISeat {
+interface SeatWithSelection extends IShowtimeSeat {
   isSelected: boolean;
 }
 
 const Booking: React.FC = () => {
-  const { movieId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
 
   // Step states
@@ -22,6 +22,7 @@ const Booking: React.FC = () => {
   const [theaters, setTheaters] = useState<ITheater[]>([]);
   const [showtimes, setShowtimes] = useState<IShowtime[]>([]);
   const [seats, setSeats] = useState<SeatWithSelection[]>([]);
+  const [film, setFilm] = useState<IFilm | null>(null);
 
   // Selection states
   const [selectedAddress, setSelectedAddress] = useState<IAddress | null>(null);
@@ -43,12 +44,17 @@ const Booking: React.FC = () => {
   // Get selected seats
   const selectedSeats = seats.filter((seat) => seat.isSelected);
 
-  // Get film info from showtime
-  const filmInfo = selectedShowtime?.film;
+  // Get sample seats for price display
+  const regSeat = seats.find((s) => s.seatVariantName === "REG");
+  const vipSeat = seats.find((s) => s.seatVariantName === "VIP");
 
-  // Calculate total price
-  const totalPrice = selectedSeats.reduce((total) => {
-    return total + (filmInfo?.price || 0);
+  // Get film info
+  const filmInfo = film || selectedShowtime?.film;
+
+  // Calculate total price based on selected seats' individual prices + movie price
+  const totalPrice = selectedSeats.reduce((total, seat) => {
+    const moviePrice = filmInfo?.price || 0;
+    return total + (moviePrice + (seat.totalPrice || 0));
   }, 0);
 
   // Generate date options (today + next 6 days)
@@ -84,6 +90,22 @@ const Booking: React.FC = () => {
     };
     fetchAddresses();
   }, []);
+
+  // Fetch film details on mount
+  useEffect(() => {
+    const fetchFilm = async () => {
+      if (!id) return;
+      try {
+        const response = await filmApi.getFilmById(parseInt(id));
+        if (response.statusCode === 200 || response.statusCode === 201) {
+          setFilm(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching film details:", error);
+      }
+    };
+    fetchFilm();
+  }, [id]);
 
   // Fetch theaters when address is selected
   const fetchTheaters = useCallback(async (addressId: number) => {
@@ -142,18 +164,18 @@ const Booking: React.FC = () => {
   );
 
   // Fetch seats when showtime is selected
-  const fetchSeats = useCallback(async (auditoriumId: number) => {
+  const fetchSeats = useCallback(async (showtimeId: number) => {
     setLoadingSeats(true);
     setSeats([]);
     setCurrentStep(4);
 
     try {
-      const response = await auditoriumApi.getAllByOfAuditorium(auditoriumId);
-      if (response.statusCode === 200) {
-        const data = response.data || [];
+      const response = await showtimeApi.getSeatAvailable(showtimeId);
+      if (response.status === 200 || response.statusCode === 200) {
+        const data = response.data?.data || response.data || [];
         const seatsWithSelection: SeatWithSelection[] = (
           Array.isArray(data) ? data : []
-        ).map((seat: ISeat) => ({
+        ).map((seat: IShowtimeSeat) => ({
           ...seat,
           isSelected: false,
         }));
@@ -175,8 +197,8 @@ const Booking: React.FC = () => {
   // Handle theater selection - automatically fetch showtimes with current date
   const handleTheaterSelect = (theater: ITheater) => {
     setSelectedTheater(theater);
-    // Use movieId from URL or default to 1 for testing
-    const filmId = movieId ? parseInt(movieId) : 1;
+    // Use id from URL or default to 1 for testing
+    const filmId = id ? parseInt(id) : 1;
     // Fetch showtimes immediately with the selected theater's ID
     fetchShowtimes(filmId, selectedDate, theater.id);
   };
@@ -185,7 +207,7 @@ const Booking: React.FC = () => {
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
     if (selectedTheater) {
-      const filmId = movieId ? parseInt(movieId) : 1;
+      const filmId = id ? parseInt(id) : 1;
       fetchShowtimes(filmId, date, selectedTheater.id);
     }
   };
@@ -193,14 +215,14 @@ const Booking: React.FC = () => {
   // Handle showtime selection
   const handleShowtimeSelect = (showtime: IShowtime) => {
     setSelectedShowtime(showtime);
-    fetchSeats(showtime.auditorium.id);
+    fetchSeats(showtime.id);
   };
 
   // Handle seat click
   const handleSeatClick = (seatId: number) => {
     setSeats((prev) =>
       prev.map((seat) => {
-        if (seat.id === seatId && seat.status === "AVAILABLE") {
+        if (seat.seatId === seatId && seat.status === "AVAILABLE") {
           return { ...seat, isSelected: !seat.isSelected };
         }
         return seat;
@@ -215,7 +237,7 @@ const Booking: React.FC = () => {
     setIsHoldingSeats(true);
     try {
       // Call hold seat API
-      const seatIds = selectedSeats.map((seat) => seat.id);
+      const seatIds = selectedSeats.map((seat) => seat.seatId);
       const response = await seatApi.holdSeat(selectedShowtime.id, seatIds);
 
       if (response.statusCode === 200 || response.statusCode === 201) {
@@ -258,14 +280,10 @@ const Booking: React.FC = () => {
     const baseClasses =
       "size-8 md:size-9 rounded-t-lg rounded-b-md transition-all focus:outline-none flex items-center justify-center text-xs font-bold";
 
-    if (
-      seat.status === "SOLD" ||
-      seat.status === "RESERVED" ||
-      seat.status === "HOLD"
-    ) {
+    if (seat.status === "BOOKED" || seat.status === "HOLD") {
       return (
         <button
-          key={seat.id}
+          key={seat.seatId}
           disabled
           className={`${baseClasses} bg-gray-800/40 cursor-not-allowed border border-transparent opacity-50 text-white/20`}
         >
@@ -277,8 +295,8 @@ const Booking: React.FC = () => {
     if (seat.isSelected) {
       return (
         <button
-          key={seat.id}
-          onClick={() => handleSeatClick(seat.id)}
+          key={seat.seatId}
+          onClick={() => handleSeatClick(seat.seatId)}
           className={`${baseClasses} bg-primary border-2 border-primary text-white shadow-[0_0_15px_rgba(236,19,55,0.6)] scale-110 relative z-10`}
         >
           {seat.seatRow}
@@ -290,8 +308,8 @@ const Booking: React.FC = () => {
     if (seat.seatVariantName === "VIP") {
       return (
         <button
-          key={seat.id}
-          onClick={() => handleSeatClick(seat.id)}
+          key={seat.seatId}
+          onClick={() => handleSeatClick(seat.seatId)}
           className={`${baseClasses} border-2 border-[#d4af37] bg-[#3a3020] hover:bg-primary hover:border-primary hover:scale-105`}
         />
       );
@@ -299,8 +317,8 @@ const Booking: React.FC = () => {
 
     return (
       <button
-        key={seat.id}
-        onClick={() => handleSeatClick(seat.id)}
+        key={seat.seatId}
+        onClick={() => handleSeatClick(seat.seatId)}
         className={`${baseClasses} bg-gray-700 hover:bg-primary hover:scale-105`}
       />
     );
@@ -610,7 +628,7 @@ const Booking: React.FC = () => {
                         close
                       </span>
                     </div>
-                    <span className="text-sm text-[#c9929b]">Đã bán</span>
+                    <span className="text-sm text-[#c9929b]">Đã đặt</span>
                   </div>
                 </div>
               </>
@@ -621,14 +639,23 @@ const Booking: React.FC = () => {
           <div className="lg:col-span-3">
             <div className="sticky top-24 bg-[#221114] rounded-2xl border border-[#482329] overflow-hidden">
               {/* Movie Header */}
-              <div className="relative h-48 w-full bg-gradient-to-tr from-gray-900 via-[#3a1c21] to-black">
-                <div className="absolute inset-0 flex items-center justify-center text-white/10">
-                  <span className="material-symbols-outlined !text-8xl">
-                    movie
-                  </span>
-                </div>
-                <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/90 to-transparent">
-                  <h3 className="text-white text-lg font-bold truncate">
+              <div className="relative h-64 w-full bg-gradient-to-tr from-gray-900 via-[#3a1c21] to-black overflow-hidden">
+                {filmInfo?.thumbnail ? (
+                  <img
+                    src={filmInfo.thumbnail}
+                    alt={filmInfo.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-white/10">
+                    <span className="material-symbols-outlined !text-8xl">
+                      movie
+                    </span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 w-full p-4">
+                  <h3 className="text-white text-xl font-bold line-clamp-2">
                     {filmInfo?.name || "Chưa chọn phim"}
                   </h3>
                   <p className="text-sm text-[#c9929b]">
@@ -691,7 +718,7 @@ const Booking: React.FC = () => {
                       {selectedSeats.length > 0 ? (
                         selectedSeats.map((seat) => (
                           <span
-                            key={seat.id}
+                            key={seat.seatId}
                             className="text-white text-sm font-bold bg-gray-800 px-2 py-0.5 rounded border border-gray-700"
                           >
                             {seat.seatRow}
@@ -707,11 +734,31 @@ const Booking: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-[#c9929b] text-xs mb-1">Đơn giá:</p>
-                    <p className="text-white text-sm">
-                      {filmInfo?.price
-                        ? `${filmInfo.price.toLocaleString()}đ/vé`
-                        : "---"}
-                    </p>
+                    <div className="text-white text-[11px] flex flex-col items-end gap-1">
+                      {regSeat && (
+                        <p>
+                          Ghế thường:{" "}
+                          <span className="font-bold">
+                            {(
+                              (filmInfo?.price || 0) + regSeat.totalPrice
+                            ).toLocaleString()}
+                            đ
+                          </span>
+                        </p>
+                      )}
+                      {vipSeat && (
+                        <p>
+                          Ghế VIP:{" "}
+                          <span className="font-bold">
+                            {(
+                              (filmInfo?.price || 0) + vipSeat.totalPrice
+                            ).toLocaleString()}
+                            đ
+                          </span>
+                        </p>
+                      )}
+                      {!regSeat && !vipSeat && "---"}
+                    </div>
                   </div>
                 </div>
 

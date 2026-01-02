@@ -5,14 +5,17 @@ const instance = axios.create({
   withCredentials: true,
 });
 
-// const handleRefreshToken = async () => {
-//   const res = await instance.post<IBackendRes<IRefresh>>(
-//     "/v1/api/auth/refresh_token"
-//   );
-//   if (res && res.data) {
-//     return res.data.access_token;
-//   } else return null;
-// };
+const handleRefreshToken = async (): Promise<string | null> => {
+  try {
+    const res = await instance.post("/api/v1/auth/refresh");
+    if (res && (res as any).data?.accessToken) {
+      return (res as any).data.accessToken;
+    }
+    return null;
+  } catch (error) {
+    return null;
+  }
+};
 
 instance.interceptors.request.use(
   (config) => {
@@ -31,15 +34,22 @@ instance.interceptors.response.use(
     return response.data || response;
   },
   async (error) => {
-    // if (error.config && error.response && error.response.status === 401) {
-    //   const access_token = await handleRefreshToken();
-    //   if (access_token && error.config) {
-    //     error.config.headers = error.config.headers || {};
-    //     error.config.headers["Authorization"] = `Bearer ${access_token}`;
-    //     localStorage.setItem("access_token", access_token);
-    //     return instance.request(error.config);
-    //   }
-    // }
+    const originalRequest = error.config;
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url.includes("/api/v1/auth/refresh_token")
+    ) {
+      originalRequest._retry = true;
+      const access_token = await handleRefreshToken();
+      if (access_token) {
+        localStorage.setItem("access_token", access_token);
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers["Authorization"] = `Bearer ${access_token}`;
+        return instance(originalRequest);
+      }
+    }
     return Promise.reject(error.response?.data || error);
   }
 );
