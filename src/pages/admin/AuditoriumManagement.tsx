@@ -7,7 +7,6 @@ import {
   Modal,
   Form,
   Input,
-  InputNumber,
   Select,
   Typography,
   Card,
@@ -23,7 +22,6 @@ import {
 } from "@ant-design/icons";
 import addressApi from "../../services/api-address";
 import auditoriumApi from "../../services/api-auditorium";
-import theaterApi from "../../services/api-theater";
 
 const { Title, Text } = Typography;
 
