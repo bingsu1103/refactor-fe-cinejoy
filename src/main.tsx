@@ -33,6 +33,8 @@ import ForgotPassword from "./pages/ForgotPassword.tsx";
 import PaymentSuccess from "./pages/PaymentSuccess.tsx";
 import PaymentFailure from "./pages/PaymentFailure.tsx";
 import GeneralError from "./pages/GeneralError.tsx";
+import Unauthorized from "./pages/Unauthorized.tsx";
+import ProtectedRoute from "./components/auth/ProtectedRoute.tsx";
 
 const router = createBrowserRouter([
   {
@@ -66,23 +68,43 @@ const router = createBrowserRouter([
       },
       {
         path: "movie/:id/booking",
-        element: <Booking />,
+        element: (
+          <ProtectedRoute>
+            <Booking />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "booking/:movieId",
-        element: <Booking />,
+        element: (
+          <ProtectedRoute>
+            <Booking />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "profile",
-        element: <Profile />,
+        element: (
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "booking-history",
-        element: <BookingHistory />,
+        element: (
+          <ProtectedRoute>
+            <BookingHistory />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "change-password",
-        element: <ChangePassword />,
+        element: (
+          <ProtectedRoute>
+            <ChangePassword />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "forgot-password",
@@ -107,8 +129,16 @@ const router = createBrowserRouter([
     element: <Register />,
   },
   {
+    path: "/unauthorized",
+    element: <Unauthorized />,
+  },
+  {
     path: "/payment",
-    element: <Payment />,
+    element: (
+      <ProtectedRoute>
+        <Payment />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/payment-success",
@@ -120,7 +150,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/admin",
-    element: <AdminLayout />,
+    element: (
+      <ProtectedRoute>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,

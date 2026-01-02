@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
 import { useAuth } from "../store/useAuth";
 import { Modal } from "antd";
 import bookingApi from "../services/api-booking";
@@ -25,21 +24,13 @@ interface ITicket {
 }
 
 const BookingHistory: React.FC = () => {
-  const { user, authenticated, isLoading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const { user, authenticated } = useAuth();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [tickets, setTickets] = useState<ITicket[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedQr, setSelectedQr] = useState<string | null>(null);
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && (!authenticated || !user)) {
-      navigate("/login");
-    }
-  }, [authLoading, authenticated, user, navigate]);
 
   // Fetch tickets from API
   useEffect(() => {
@@ -142,10 +133,6 @@ const BookingHistory: React.FC = () => {
         );
     }
   };
-
-  if (!authenticated || !user) {
-    return null;
-  }
 
   return (
     <AccountLayout

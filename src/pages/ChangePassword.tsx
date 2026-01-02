@@ -16,7 +16,7 @@ interface PasswordStrengthInfo {
 }
 
 const ChangePassword: React.FC = () => {
-  const { user, authenticated, clearUser } = useAuth();
+  const { clearUser } = useAuth();
   const navigate = useNavigate();
 
   // Form states
@@ -168,10 +168,6 @@ const ChangePassword: React.FC = () => {
     setMessage(null);
     navigate(-1);
   };
-
-  if (!authenticated || !user) {
-    return null;
-  }
 
   return (
     <AccountLayout

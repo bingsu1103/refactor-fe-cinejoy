@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
 import { useAuth } from "../store/useAuth";
 import userApi from "../services/api-user";
 import uploadApi from "../services/api-upload";
 import AccountLayout from "../components/layout/AccountLayout";
 
 const Profile: React.FC = () => {
-  const { user, authenticated, isLoading: authLoading, setUser } = useAuth();
-  const navigate = useNavigate();
+  const { user, authenticated, setUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
@@ -27,13 +25,6 @@ const Profile: React.FC = () => {
     type: "success" | "error";
     text: string;
   } | null>(null);
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && (!authenticated || !user)) {
-      navigate("/login");
-    }
-  }, [authLoading, authenticated, user, navigate]);
 
   // Initialize form with user data
   useEffect(() => {
