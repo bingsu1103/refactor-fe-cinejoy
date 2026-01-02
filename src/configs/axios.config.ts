@@ -39,7 +39,7 @@ instance.interceptors.response.use(
       error.response &&
       error.response.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/api/v1/auth/refresh_token")
+      !originalRequest.url.includes("/api/v1/auth/refresh")
     ) {
       originalRequest._retry = true;
       const access_token = await handleRefreshToken();

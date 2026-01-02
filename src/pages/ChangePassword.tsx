@@ -36,7 +36,6 @@ const ChangePassword: React.FC = () => {
     text: string;
   } | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   // Calculate password strength
   const passwordStrength = useMemo((): PasswordStrengthInfo => {
@@ -145,11 +144,8 @@ const ChangePassword: React.FC = () => {
       localStorage.removeItem("refresh_token");
       clearUser();
 
-      // Show success popup (user is already logged out)
-      setShowSuccessPopup(true);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      // Redirect immediately
+      navigate("/login", { replace: true });
     } catch (error: any) {
       console.error("Change password error:", error);
       const errorMessage =
@@ -161,11 +157,6 @@ const ChangePassword: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Handle redirect to login (user is already logged out)
-  const handleRedirectToLogin = () => {
-    navigate("/login");
   };
 
   // Handle cancel
@@ -396,33 +387,6 @@ const ChangePassword: React.FC = () => {
           </div>
         </form>
       </div>
-
-      {/* Success Popup Modal */}
-      {showSuccessPopup && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-          <div className="bg-[#2f161a] rounded-2xl border border-[#482329] p-8 max-w-md w-full text-center shadow-2xl">
-            <div className="size-20 mx-auto mb-6 rounded-full bg-green-500/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-green-400 text-[48px]">
-                check_circle
-              </span>
-            </div>
-            <h2 className="text-white text-2xl font-bold mb-3">
-              Đổi mật khẩu thành công!
-            </h2>
-            <p className="text-[#c9929b] mb-8">
-              Mật khẩu của bạn đã được thay đổi. Vui lòng đăng nhập lại với mật
-              khẩu mới.
-            </p>
-            <button
-              onClick={handleRedirectToLogin}
-              className="w-full py-3 rounded-lg bg-primary hover:bg-red-600 text-white font-bold shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined">login</span>
-              Đăng nhập lại
-            </button>
-          </div>
-        </div>
-      )}
     </AccountLayout>
   );
 };
