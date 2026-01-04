@@ -74,12 +74,12 @@ const filmApi = {
   },
 
   getFilmByStatus: async (status: string, page: number, size?: number) => {
-    const filters = `status='${status}'`;
+    const filter = `status='${status}'`;
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const params: any = {
       page,
       sort: "releaseDate,desc",
-      filters,
+      filter,
     };
     if (size !== undefined) {
       params.size = size;
