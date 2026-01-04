@@ -4,7 +4,7 @@ import axios from "../configs/axios.config";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const showtimeApi = {
-  getAllShowTimes: (page: number, size: number) => {
+  getAllShowTimes: (page?: number, size?: number) => {
     const payload = {
       page,
       size,

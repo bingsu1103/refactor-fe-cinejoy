@@ -7,7 +7,7 @@ const bookingApi = {
     });
     return response;
   },
-  getAllBooking: async (page: number, limit?: number) => {
+  getAllBooking: async (page?: number, limit?: number) => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const response = await axios.get(`${backendUrl}/api/v1/bookings`, {
       params: {
@@ -36,5 +36,29 @@ const bookingApi = {
     );
     return response;
   },
+  getTotalRevenue: async (month: number, year: number) => {
+    const params = {
+      month,
+      year,
+    };
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.get(`${backendUrl}/api/v1/bookings/revenue`, {
+      params,
+    });
+    return response;
+  },
+
+  updateBooking: async (id: number, status: string) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const data = {
+      status,
+    };
+    const response = await axios.put(
+      `${backendUrl}/api/v1/bookings/${id}/status`,
+      data
+    );
+    return response;
+  },
 };
+
 export default bookingApi;

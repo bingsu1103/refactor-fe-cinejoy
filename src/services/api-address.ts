@@ -1,7 +1,7 @@
 import axios from "../configs/axios.config";
 const addressApi = {
   getAllAddresses: async (
-    page: number,
+    page?: number,
     size?: number
   ): Promise<IBackendRes<any>> => {
     const params: any = {

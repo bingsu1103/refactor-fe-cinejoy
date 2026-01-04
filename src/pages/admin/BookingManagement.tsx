@@ -8,12 +8,15 @@ import {
   Typography,
   message,
   Divider,
+  Select,
+  Popconfirm,
 } from "antd";
 import {
   EyeOutlined,
   ShoppingCartOutlined,
   CalendarOutlined,
   EnvironmentOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import bookingApi from "../../services/api-booking";
 
@@ -107,6 +110,23 @@ const BookingManagement: React.FC = () => {
     }
   };
 
+  const handleUpdateStatus = async (id: number, status: string) => {
+    try {
+      setLoading(true);
+      await bookingApi.updateBooking(id, status);
+      message.success(`Cập nhật trạng thái thành ${status} thành công!`);
+      fetchBookings();
+      // Update selected booking if modal is open
+      if (selected && selected.id === id) {
+        setSelected({ ...selected, status });
+      }
+    } catch {
+      message.error("Cập nhật trạng thái thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchBookings();
   }, [currentPage]);
@@ -162,10 +182,19 @@ const BookingManagement: React.FC = () => {
     },
     {
       title: "Status",
-      dataIndex: "status",
       key: "status",
-      width: 120,
-      render: (status: string) => statusTag(status),
+      width: 150,
+      render: (_: unknown, record: Booking) => (
+        <Select
+          value={record.status || "PENDING"}
+          onChange={(value) => handleUpdateStatus(record.id, value)}
+          style={{ width: 130 }}
+          options={[
+            { value: "PENDING", label: <Tag color="gold">PENDING</Tag> },
+            { value: "CONFIRMED", label: <Tag color="green">CONFIRMED</Tag> },
+          ]}
+        />
+      ),
     },
     {
       title: "Total",
@@ -252,6 +281,27 @@ const BookingManagement: React.FC = () => {
         open={!!selected}
         onCancel={() => setSelected(null)}
         footer={[
+          <Popconfirm
+            key="confirm"
+            title="Xác nhận booking"
+            description="Bạn có chắc muốn xác nhận booking này?"
+            okText="Xác nhận"
+            cancelText="Hủy"
+            onConfirm={() =>
+              selected && handleUpdateStatus(selected.id, "CONFIRMED")
+            }
+            disabled={selected?.status === "CONFIRMED"}
+          >
+            <Button
+              type="primary"
+              icon={<CheckCircleOutlined />}
+              disabled={selected?.status === "CONFIRMED"}
+            >
+              {selected?.status === "CONFIRMED"
+                ? "Đã xác nhận"
+                : "Xác nhận Booking"}
+            </Button>
+          </Popconfirm>,
           <Button key="close" onClick={() => setSelected(null)}>
             Close
           </Button>,

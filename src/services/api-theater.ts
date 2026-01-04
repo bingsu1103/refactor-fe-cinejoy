@@ -2,7 +2,7 @@
 import axios from "../configs/axios.config";
 
 const theaterApi = {
-  getAllTheaters: async (page: number, size?: number) => {
+  getAllTheaters: async (page?: number, size?: number) => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const params: any = {
       page,
