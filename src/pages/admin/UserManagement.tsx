@@ -152,7 +152,7 @@ const UserManagement: React.FC = () => {
 
   const columns = [
     {
-      title: "User",
+      title: "Người dùng",
       dataIndex: "username",
       key: "username",
       render: (_: unknown, record: User) => (
@@ -170,7 +170,7 @@ const UserManagement: React.FC = () => {
       ),
     },
     {
-      title: "Contact",
+      title: "Liên hệ",
       key: "contact",
       render: (_: unknown, record: User) => (
         <div>
@@ -180,7 +180,7 @@ const UserManagement: React.FC = () => {
       ),
     },
     {
-      title: "Role",
+      title: "Vai trò",
       dataIndex: "role",
       key: "role",
       render: (role: string) =>
@@ -191,12 +191,12 @@ const UserManagement: React.FC = () => {
         ),
     },
     {
-      title: "Created At",
+      title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
     },
     {
-      title: "Action",
+      title: "Hành động",
       key: "action",
       align: "left" as const,
       render: (_: unknown, record: User) => (
@@ -235,9 +235,9 @@ const UserManagement: React.FC = () => {
       >
         <div>
           <Title level={3} style={{ marginBottom: 0 }}>
-            Users
+            Người dùng
           </Title>
-          <Text type="secondary">Manage accounts and roles</Text>
+          <Text type="secondary">Quản lý tài khoản và vai trò</Text>
         </div>
 
         <Button
@@ -245,7 +245,7 @@ const UserManagement: React.FC = () => {
           icon={<PlusOutlined />}
           onClick={() => setOpenCreate(true)}
         >
-          New User
+          Thêm người dùng
         </Button>
       </div>
 
@@ -266,18 +266,18 @@ const UserManagement: React.FC = () => {
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
           >
-            Prev
+            Trước
           </Button>
 
           <Text>
-            Page {currentPage} / {totalPages}
+            Trang {currentPage} / {totalPages}
           </Text>
 
           <Button
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
           >
-            Next
+            Sau
           </Button>
         </Space>
       </div>

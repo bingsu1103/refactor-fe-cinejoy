@@ -20,18 +20,18 @@ const { Text } = Typography;
 
 // Sidebar menu items
 const menuItems: MenuProps["items"] = [
-  { key: "/admin", icon: <HomeOutlined />, label: "Overview" },
-  { key: "/admin/users", icon: <UserOutlined />, label: "Users" },
-  { key: "/admin/theaters", icon: <EnvironmentOutlined />, label: "Theaters" },
+  { key: "/admin", icon: <HomeOutlined />, label: "Tổng quan" },
+  { key: "/admin/users", icon: <UserOutlined />, label: "Người dùng" },
+  { key: "/admin/theaters", icon: <EnvironmentOutlined />, label: "Rạp chiếu" },
   {
     key: "/admin/auditoriums",
     icon: <AppstoreOutlined />,
-    label: "Auditoriums",
+    label: "Phòng chiếu",
   },
-  { key: "/admin/films", icon: <VideoCameraOutlined />, label: "Films" },
-  { key: "/admin/showtimes", icon: <ScheduleOutlined />, label: "Showtimes" },
-  { key: "/admin/addresses", icon: <PushpinOutlined />, label: "Addresses" },
-  { key: "/admin/bookings", icon: <FileTextOutlined />, label: "Bookings" },
+  { key: "/admin/films", icon: <VideoCameraOutlined />, label: "Phim" },
+  { key: "/admin/showtimes", icon: <ScheduleOutlined />, label: "Suất chiếu" },
+  { key: "/admin/addresses", icon: <PushpinOutlined />, label: "Địa chỉ" },
+  { key: "/admin/bookings", icon: <FileTextOutlined />, label: "Đặt vé" },
 ];
 
 const AdminLayout: React.FC = () => {

@@ -100,7 +100,7 @@ const BookingManagement: React.FC = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const res = await bookingApi.getAllBooking(currentPage - 1, SIZE);
+      const res = await bookingApi.getAllBooking(currentPage, SIZE);
       setBookings(res.data.data);
       setTotalPages(res.data.meta?.totalPages || 1);
     } catch {
@@ -133,7 +133,7 @@ const BookingManagement: React.FC = () => {
 
   const columns = [
     {
-      title: "Booking",
+      title: "Đơn đặt vé",
       key: "booking",
       render: (_: unknown, record: Booking) => (
         <Space>
@@ -148,7 +148,7 @@ const BookingManagement: React.FC = () => {
       ),
     },
     {
-      title: "Film & Showtime",
+      title: "Phim & Suất chiếu",
       key: "film",
       render: (_: unknown, record: Booking) => (
         <div>
@@ -162,14 +162,14 @@ const BookingManagement: React.FC = () => {
             </Text>
             <Text type="secondary">{record.showtime?.startTime}</Text>
             <Text type="secondary">
-              Room {record.showtime?.auditoriumNumber}
+              Phòng {record.showtime?.auditoriumNumber}
             </Text>
           </Space>
         </div>
       ),
     },
     {
-      title: "User",
+      title: "Người dùng",
       key: "user",
       render: (_: unknown, record: Booking) => (
         <div>
@@ -181,7 +181,7 @@ const BookingManagement: React.FC = () => {
       ),
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       key: "status",
       width: 150,
       render: (_: unknown, record: Booking) => (
@@ -189,6 +189,7 @@ const BookingManagement: React.FC = () => {
           value={record.status || "PENDING"}
           onChange={(value) => handleUpdateStatus(record.id, value)}
           style={{ width: 130 }}
+          disabled={record.status !== "PENDING"}
           options={[
             { value: "PENDING", label: <Tag color="gold">PENDING</Tag> },
             { value: "CONFIRMED", label: <Tag color="green">CONFIRMED</Tag> },
@@ -197,7 +198,7 @@ const BookingManagement: React.FC = () => {
       ),
     },
     {
-      title: "Total",
+      title: "Tổng tiền",
       dataIndex: "total_price",
       key: "total_price",
       width: 130,
@@ -210,7 +211,7 @@ const BookingManagement: React.FC = () => {
           : "—",
     },
     {
-      title: "Action",
+      title: "Hành động",
       key: "action",
       width: 100,
       render: (_: unknown, record: Booking) => (
@@ -219,7 +220,7 @@ const BookingManagement: React.FC = () => {
           icon={<EyeOutlined />}
           onClick={() => setSelected(record)}
         >
-          Details
+          Chi tiết
         </Button>
       ),
     },
@@ -237,9 +238,9 @@ const BookingManagement: React.FC = () => {
       >
         <div>
           <Title level={3} style={{ marginBottom: 0 }}>
-            Bookings
+            Đặt vé
           </Title>
-          <Text type="secondary">Track reservations and payments</Text>
+          <Text type="secondary">Quản lý đơn đặt vé và thanh toán</Text>
         </div>
       </div>
 
@@ -260,18 +261,18 @@ const BookingManagement: React.FC = () => {
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
           >
-            Prev
+            Trước
           </Button>
 
           <Text>
-            Page {currentPage} / {totalPages}
+            Trang {currentPage} / {totalPages}
           </Text>
 
           <Button
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
           >
-            Next
+            Sau
           </Button>
         </Space>
       </div>

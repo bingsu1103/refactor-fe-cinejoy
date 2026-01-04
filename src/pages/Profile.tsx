@@ -383,37 +383,6 @@ const Profile: React.FC = () => {
           </form>
         </div>
       </div>
-
-      {/* Quick Link Area (Optional items from user design) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-        <div className="bg-[#2f161a] border border-[#482329] rounded-xl p-5 flex items-start gap-4 hover:border-primary/50 transition-colors cursor-pointer group">
-          <div className="p-3 bg-blue-500/10 rounded-lg text-blue-400 group-hover:bg-blue-500/20 transition-colors">
-            <span className="material-symbols-outlined">shield</span>
-          </div>
-          <div>
-            <h3 className="text-white font-bold mb-1 group-hover:text-primary transition-colors">
-              Bảo mật tài khoản
-            </h3>
-            <p className="text-[#c9929b] text-sm leading-relaxed">
-              Kích hoạt xác thực 2 bước để bảo vệ tài khoản của bạn tốt hơn.
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-[#2f161a] border border-[#482329] rounded-xl p-5 flex items-start gap-4 hover:border-primary/50 transition-colors cursor-pointer group">
-          <div className="p-3 bg-purple-500/10 rounded-lg text-purple-400 group-hover:bg-purple-500/20 transition-colors">
-            <span className="material-symbols-outlined">notifications</span>
-          </div>
-          <div>
-            <h3 className="text-white font-bold mb-1 group-hover:text-primary transition-colors">
-              Cài đặt thông báo
-            </h3>
-            <p className="text-[#c9929b] text-sm leading-relaxed">
-              Nhận thông báo về phim mới ra rạp và các khuyến mãi đặc biệt.
-            </p>
-          </div>
-        </div>
-      </div>
     </AccountLayout>
   );
 };

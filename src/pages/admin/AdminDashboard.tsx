@@ -176,12 +176,12 @@ const AdminDashboard: React.FC = () => {
     stats.totalAddresses;
 
   const chartData = [
-    { label: "Users", value: stats.totalUsers, color: "#1890ff" },
-    { label: "Bookings", value: stats.totalBookings, color: "#52c41a" },
-    { label: "Films", value: stats.totalFilms, color: "#faad14" },
-    { label: "Showtimes", value: stats.totalShowtimes, color: "#eb2f96" },
-    { label: "Theaters", value: stats.totalTheaters, color: "#722ed1" },
-    { label: "Addresses", value: stats.totalAddresses, color: "#13c2c2" },
+    { label: "Người dùng", value: stats.totalUsers, color: "#1890ff" },
+    { label: "Đơn đặt vé", value: stats.totalBookings, color: "#52c41a" },
+    { label: "Phim", value: stats.totalFilms, color: "#faad14" },
+    { label: "Suất chiếu", value: stats.totalShowtimes, color: "#eb2f96" },
+    { label: "Rạp chiếu", value: stats.totalTheaters, color: "#722ed1" },
+    { label: "Địa chỉ", value: stats.totalAddresses, color: "#13c2c2" },
   ];
 
   const formatCurrency = (value: number) => {

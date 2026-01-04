@@ -37,6 +37,11 @@ const theaterApi = {
     );
     return response;
   },
+  removeTheater: async (id: number) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const response = await axios.delete(`${backendUrl}/api/v1/theaters/${id}`);
+    return response;
+  },
 };
 
 export default theaterApi;

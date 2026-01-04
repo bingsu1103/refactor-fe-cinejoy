@@ -50,7 +50,7 @@ const AddressManagement: React.FC = () => {
   const fetchAddress = async () => {
     try {
       setLoading(true);
-      const res = await addressApi.getAllAddresses(currentPage - 1, SIZE);
+      const res = await addressApi.getAllAddresses(currentPage, SIZE);
       setAddresses(res.data.data);
       setTotalPages(res.data.meta?.totalPages || 1);
     } catch {

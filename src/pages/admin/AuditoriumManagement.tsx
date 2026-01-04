@@ -65,7 +65,7 @@ const AuditoriumManagement: React.FC = () => {
   // Fetch addresses on mount
   const fetchAddresses = async () => {
     try {
-      const res = await addressApi.getAllAddresses(0, 100);
+      const res = await addressApi.getAllAddresses();
       setAddresses(res.data.data);
     } catch {
       message.error("Lỗi tải danh sách địa chỉ");

@@ -84,7 +84,7 @@ const ShowtimeManagement: React.FC = () => {
   const fetchShowtimes = async () => {
     try {
       setLoading(true);
-      const res = await showtimeApi.getAllShowTimes(currentPage - 1, SIZE);
+      const res = await showtimeApi.getAllShowTimes(currentPage, SIZE);
       setShowtimes(res.data.data);
       setTotalPages(res.data.meta.totalPages);
     } catch {
@@ -96,7 +96,7 @@ const ShowtimeManagement: React.FC = () => {
 
   const fetchAddresses = async () => {
     try {
-      const res = await addressApi.getAllAddresses(0, 100);
+      const res = await addressApi.getAllAddresses(1, 100);
       setAddresses(res.data.data);
     } catch {
       message.error("Lỗi tải danh sách địa chỉ");
@@ -181,7 +181,6 @@ const ShowtimeManagement: React.FC = () => {
         date: values.date.format("YYYY-MM-DD"),
         startTime: values.startTime.format("HH:mm:ss"),
         endTime: values.endTime.format("HH:mm:ss"),
-        status: values.status,
       };
 
       await showtimeApi.create(payload);
@@ -207,7 +206,7 @@ const ShowtimeManagement: React.FC = () => {
   };
 
   const columns = [
-    { title: "Film", dataIndex: ["film", "name"], key: "film" },
+    { title: "Phim", dataIndex: ["film", "name"], key: "film" },
     {
       title: "Phòng",
       key: "auditorium",
@@ -217,7 +216,6 @@ const ShowtimeManagement: React.FC = () => {
     { title: "Ngày", dataIndex: "date", key: "date" },
     { title: "Bắt đầu", dataIndex: "startTime", key: "startTime" },
     { title: "Kết thúc", dataIndex: "endTime", key: "endTime" },
-    { title: "Trạng thái", dataIndex: "status", key: "status" },
     {
       title: "Hành động",
       key: "action",
@@ -235,7 +233,7 @@ const ShowtimeManagement: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Title level={3}>Showtimes</Title>
+      <Title level={3}>Suất chiếu</Title>
 
       <Table
         rowKey="id"
@@ -252,16 +250,16 @@ const ShowtimeManagement: React.FC = () => {
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
           >
-            Prev
+            Trước
           </Button>
           <Text>
-            Page {currentPage} / {totalPages}
+            Trang {currentPage} / {totalPages}
           </Text>
           <Button
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
           >
-            Next
+            Sau
           </Button>
         </Space>
       </div>
@@ -397,23 +395,6 @@ const ShowtimeManagement: React.FC = () => {
               <TimePicker style={{ width: "100%" }} format="HH:mm" disabled />
             </Form.Item>
           </Col>
-
-          <Col span={4}>
-            <Form.Item
-              name="status"
-              label="Trạng thái"
-              rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
-            >
-              <Select
-                placeholder="Chọn"
-                options={[
-                  { value: "UPCOMING", label: "Sắp chiếu" },
-                  { value: "ACTIVE", label: "Đang chiếu" },
-                  { value: "CANCELLED", label: "Hủy" },
-                ]}
-              />
-            </Form.Item>
-          </Col>
         </Row>
 
         <Button type="primary" onClick={handleSubmit}>
@@ -459,7 +440,7 @@ const ShowtimeManagement: React.FC = () => {
               width: 140,
             },
             {
-              title: "Action",
+              title: "Hành động",
               width: 120,
               render: (_: unknown, record: Film) => (
                 <Button type="primary" onClick={() => handleFilmSelect(record)}>
