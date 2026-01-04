@@ -9,7 +9,7 @@ const Register: React.FC = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [agreeTerms, setAgreeTerms] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,10 +38,6 @@ const Register: React.FC = () => {
     }
     if (password !== confirmPassword) {
       setError("Mật khẩu xác nhận không khớp");
-      return;
-    }
-    if (!agreeTerms) {
-      setError("Vui lòng đồng ý với điều khoản sử dụng");
       return;
     }
 
