@@ -225,41 +225,6 @@ const Register: React.FC = () => {
                 </div>
               </label>
 
-              {/* Terms Checkbox */}
-              <label className="flex items-start gap-3 mt-2 cursor-pointer group">
-                <div className="relative flex items-center">
-                  <input
-                    className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-[#c9929b] bg-transparent checked:bg-primary checked:border-primary transition-all"
-                    type="checkbox"
-                    checked={agreeTerms}
-                    onChange={(e) => setAgreeTerms(e.target.checked)}
-                    disabled={isLoading}
-                  />
-                  <span className="absolute text-white opacity-0 peer-checked:opacity-100 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                    <span className="material-symbols-outlined text-[16px] font-bold">
-                      check
-                    </span>
-                  </span>
-                </div>
-                <span className="text-[#c9929b] text-sm leading-tight group-hover:text-white transition-colors">
-                  Tôi đồng ý với{" "}
-                  <Link
-                    to="/terms"
-                    className="text-white font-bold hover:underline"
-                  >
-                    Điều khoản sử dụng
-                  </Link>{" "}
-                  và{" "}
-                  <Link
-                    to="/privacy"
-                    className="text-white font-bold hover:underline"
-                  >
-                    Chính sách bảo mật
-                  </Link>
-                  .
-                </span>
-              </label>
-
               {/* Submit Button */}
               <button
                 className="mt-4 flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-primary hover:bg-red-600 text-white text-base font-bold tracking-wide shadow-lg shadow-primary/30 transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
