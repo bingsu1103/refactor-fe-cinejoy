@@ -201,7 +201,7 @@ const MovieDetail: React.FC = () => {
         </div>
 
         {/* Main Content Grid */}
-        <div className="layout-content-container max-w-[1200px] w-full mx-auto px-4 md:px-10 pb-20">
+        <div className="mt-10 layout-content-container max-w-[1200px] w-full mx-auto px-4 md:px-10 pb-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
             {/* Left Column (Main) */}
             <div className="lg:col-span-8 flex flex-col gap-10">
