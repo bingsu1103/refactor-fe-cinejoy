@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   Table,
   Button,
-  Tag,
   Space,
   Modal,
   Form,
@@ -114,7 +113,7 @@ const AddressManagement: React.FC = () => {
 
   const columns = [
     {
-      title: "Address",
+      title: "Địa chỉ",
       key: "address",
       render: (_: unknown, record: Address) => (
         <Space>
@@ -129,27 +128,18 @@ const AddressManagement: React.FC = () => {
       ),
     },
     {
-      title: "City",
+      title: "Thành phố",
       dataIndex: "city",
       key: "city",
     },
     {
-      title: "Theaters",
-      key: "theaters",
-      render: (_: unknown, record: Address) => (
-        <Tag color="blue">
-          {record.theaters ? record.theaters.length : 0} theaters
-        </Tag>
-      ),
-    },
-    {
-      title: "Created At",
+      title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
     },
     {
-      title: "Action",
+      title: "Hành động",
       key: "action",
       width: 100,
       render: (_: unknown, record: Address) => (
@@ -161,12 +151,12 @@ const AddressManagement: React.FC = () => {
           />
 
           <Popconfirm
-            title="Delete address"
-            description="Are you sure you want to delete this address?"
+            title="Xóa địa chỉ"
+            description="Bạn có chắc muốn xóa địa chỉ này?"
             icon={<ExclamationCircleOutlined style={{ color: "red" }} />}
-            okText="Delete"
+            okText="Xóa"
             okButtonProps={{ danger: true }}
-            cancelText="Cancel"
+            cancelText="Hủy"
             onConfirm={() => handleDelete(record.id)}
           >
             <Button danger type="text" icon={<DeleteOutlined />} />
@@ -188,9 +178,9 @@ const AddressManagement: React.FC = () => {
       >
         <div>
           <Title level={3} style={{ marginBottom: 0 }}>
-            Addresses
+            Địa chỉ
           </Title>
-          <Text type="secondary">Centralized address book for theaters</Text>
+          <Text type="secondary">Quản lý danh sách địa chỉ</Text>
         </div>
 
         <Button
@@ -198,7 +188,7 @@ const AddressManagement: React.FC = () => {
           icon={<PlusOutlined />}
           onClick={() => handleOpenModal()}
         >
-          New Address
+          Thêm địa chỉ
         </Button>
       </div>
 
@@ -219,18 +209,18 @@ const AddressManagement: React.FC = () => {
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
           >
-            Prev
+            Trước
           </Button>
 
           <Text>
-            Page {currentPage} / {totalPages}
+            Trang {currentPage} / {totalPages}
           </Text>
 
           <Button
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
           >
-            Next
+            Sau
           </Button>
         </Space>
       </div>
@@ -243,35 +233,36 @@ const AddressManagement: React.FC = () => {
           setEditingAddress(null);
           form.resetFields();
         }}
-        title={editingAddress ? "Update Address" : "Create Address"}
-        okText={editingAddress ? "Update" : "Create"}
+        title={editingAddress ? "Cập nhật địa chỉ" : "Tạo địa chỉ mới"}
+        okText={editingAddress ? "Cập nhật" : "Tạo"}
+        cancelText="Hủy"
         onOk={handleSubmit}
         confirmLoading={loading}
         destroyOnClose
       >
         <Form layout="vertical" form={form}>
           <Form.Item
-            label="Street Number"
+            label="Số nhà"
             name="street_number"
-            rules={[{ required: true, message: "Street number is required" }]}
+            rules={[{ required: true, message: "Vui lòng nhập số nhà" }]}
           >
-            <Input placeholder="e.g. 123" />
+            <Input placeholder="VD: 123" />
           </Form.Item>
 
           <Form.Item
-            label="Street Name"
+            label="Tên đường"
             name="street_name"
-            rules={[{ required: true, message: "Street name is required" }]}
+            rules={[{ required: true, message: "Vui lòng nhập tên đường" }]}
           >
-            <Input placeholder="e.g. Nguyen Hue" />
+            <Input placeholder="VD: Nguyễn Huệ" />
           </Form.Item>
 
           <Form.Item
-            label="City"
+            label="Thành phố"
             name="city"
-            rules={[{ required: true, message: "City is required" }]}
+            rules={[{ required: true, message: "Vui lòng nhập thành phố" }]}
           >
-            <Input placeholder="e.g. Ho Chi Minh City" />
+            <Input placeholder="VD: Hồ Chí Minh" />
           </Form.Item>
         </Form>
       </Modal>

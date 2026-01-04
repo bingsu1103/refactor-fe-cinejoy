@@ -301,31 +301,19 @@ const BookingHistory: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex gap-3">
-                      {ticket.status === "upcoming" && ticket.qrCode && (
-                        <>
-                          <button
-                            onClick={() => {
-                              setSelectedQr(ticket.qrCode || null);
-                              setIsModalOpen(true);
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#482329] text-white hover:bg-white/5 text-sm font-medium transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-lg">
-                              qr_code_2
-                            </span>
-                            Mã QR
-                          </button>
-                        </>
-                      )}
-                      {ticket.status === "completed" && (
-                        <>
-                          <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-primary hover:bg-primary/5 text-sm font-medium transition-colors">
-                            <span className="material-symbols-outlined text-lg">
-                              rate_review
-                            </span>
-                            Đánh giá
-                          </button>
-                        </>
+                      {ticket.qrCode && ticket.status !== "cancelled" && (
+                        <button
+                          onClick={() => {
+                            setSelectedQr(ticket.qrCode || null);
+                            setIsModalOpen(true);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#482329] text-white hover:bg-white/5 text-sm font-medium transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-lg">
+                            qr_code_2
+                          </span>
+                          Mã QR
+                        </button>
                       )}
                       {ticket.status === "cancelled" && (
                         <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm font-medium transition-colors">
