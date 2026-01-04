@@ -406,13 +406,13 @@ const Theater: React.FC = () => {
 
                       {/* Card Footer */}
                       <div className="mt-auto flex items-center justify-between border-t border-[#482329] bg-[#221114]/50 px-5 py-3">
-                        <a
+                        {/* <a
                           className="text-sm font-medium text-[#c9929b] hover:text-white transition-colors"
                           href="#"
                         >
                           Xem bản đồ
-                        </a>
-                        <Link
+                        </a> */}
+                        {/* <Link
                           to={`/theater/${theater.id}`}
                           className="flex items-center gap-1 text-sm font-bold text-primary hover:text-red-400 transition-colors"
                         >
@@ -420,7 +420,7 @@ const Theater: React.FC = () => {
                           <span className="material-symbols-outlined text-[18px]">
                             arrow_forward
                           </span>
-                        </Link>
+                        </Link> */}
                       </div>
                     </article>
                   ))}

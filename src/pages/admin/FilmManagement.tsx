@@ -343,7 +343,7 @@ const FilmManagement = () => {
           </Form.Item>
 
           <Form.Item
-            name="release_date"
+            name="releaseDate"
             label="Ngày chiếu"
             rules={[{ required: true }]}
           >
